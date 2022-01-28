@@ -8,8 +8,7 @@ from sklearn.metrics import roc_curve, auc
 from scipy.special import expit
 from scipy import interpolate
 from scipy import integrate
-from collections import Counter
-from matplotlib.colors import ListedColormap
+
 
 
 def interpolate_roc_fun(fpr, tpr, n_grid):
@@ -82,7 +81,7 @@ def ABROCAvs_plot(plot_type, versus, r=10, s=0, n=[10000, 10000], mu_0=[0, 0], m
             elif plot_type == 'obs_noise':
                 X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=[0.1,e], eta_mean=eta_mean, theta_0=theta_0, theta_1=theta_1, sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
             elif plot_type == 'theta_diff':
-                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1*e,1*e], sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
+                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1,1*e], sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
             else:
                 X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=theta_1, sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
 
@@ -160,7 +159,7 @@ def two_way_plot(big_x, big_y, plot_type, s=0, figsize=(20,20), n=[10000, 10000]
             elif plot_type == 'sample_prop vs theta_diff':
                 xaxis, yaxis = 'sample_prop', 'theta_diff'
                 n = [int(round(sum(n) * a_x)), int(round(sum(n) * (1 - a_x)))]
-                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1*a_y,1*a_y], sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
+                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1,1*a_y], sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
             elif plot_type == 'sample_prop vs sample_size':
                 xaxis, yaxis = 'sample_prop', 'sample_size'
                 n = [int(round(a_y * a_x)), int(round(a_y * (1 - a_x)))]
@@ -170,7 +169,7 @@ def two_way_plot(big_x, big_y, plot_type, s=0, figsize=(20,20), n=[10000, 10000]
                 X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=[0.1,a_y], eta_mean=eta_mean, theta_0=theta_0, theta_1=theta_1, sigma_scale_factor=sigma_scale_factor, mu_change=a_x, label_prop=True)
             elif plot_type == 'label_dist vs theta_diff':
                 xaxis, yaxis = 'label_dist', 'theta_diff'
-                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1*a_y,1*a_y], sigma_scale_factor=sigma_scale_factor, mu_change=a_x, label_prop=True)
+                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1,1*a_y], sigma_scale_factor=sigma_scale_factor, mu_change=a_x, label_prop=True)
             elif plot_type == 'label_dist vs sample_size':
                 xaxis, yaxis = 'label_dist', 'sample_size'
                 n = [a_y // 2, a_y // 2]
@@ -180,14 +179,14 @@ def two_way_plot(big_x, big_y, plot_type, s=0, figsize=(20,20), n=[10000, 10000]
                 X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=[0.1,a_y], eta_mean=eta_mean, theta_0=theta_0, theta_1=theta_1, sigma_scale_factor=sigma_scale_factor, mu_change=a_x, label_prop=label_prop)
             elif plot_type == 'cov_means vs theta_diff':
                 xaxis, yaxis = 'cov_means', 'theta_diff'
-                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1*a_y,1*a_y], sigma_scale_factor=sigma_scale_factor, mu_change=a_x, label_prop=label_prop)
+                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1,1*a_y], sigma_scale_factor=sigma_scale_factor, mu_change=a_x, label_prop=label_prop)
             elif plot_type == 'cov_means vs sample_size':
                 xaxis, yaxis = 'cov_means', 'sample_size'
                 n = [a_y // 2, a_y // 2]
                 X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=theta_1, sigma_scale_factor=sigma_scale_factor, mu_change=a_x, label_prop=label_prop)
             elif plot_type == 'obs_noise vs theta_diff':
                 xaxis, yaxis = 'obs_noise', 'theta_diff'
-                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=[0.1,a_x], eta_mean=eta_mean, theta_0=theta_0, theta_1=[1 * a_y, 1 * a_y], sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
+                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=[0.1,a_x], eta_mean=eta_mean, theta_0=theta_0, theta_1=[1, 1 * a_y], sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
             elif plot_type == 'obs_noise vs sample_size':
                 xaxis, yaxis = 'obs_noise', 'sample_size'
                 n = [a_y // 2, a_y // 2]
@@ -195,7 +194,7 @@ def two_way_plot(big_x, big_y, plot_type, s=0, figsize=(20,20), n=[10000, 10000]
             elif plot_type == 'theta_diff vs sample_size':
                 xaxis, yaxis = 'theta_diff', 'sample_size'
                 n = [a_y // 2, a_y // 2]
-                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1*a_x,1*a_x], sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
+                X, y = simulate(subgroup_n=n, mu_0=mu_0, mu_1=mu_1, sigma_0=sigma_0, sigma_1=sigma_1, eta_sd=eta_sd, eta_mean=eta_mean, theta_0=theta_0, theta_1=[1,1*a_x], sigma_scale_factor=sigma_scale_factor, mu_change=mu_change, label_prop=label_prop)
 
 
             X_train_0, X_test_0, y_train_0, y_test_0 = train_test_split(X[:n[0]], y[:n[0]], test_size=0.2,
@@ -301,8 +300,3 @@ def visualize_data(point_size=.5, s=0, n=[10000, 10000], mu_0=[0, 0], mu_1=[0, 0
     fig.suptitle(f'abroca = {abroca}')
     fig.tight_layout(pad=10.0)
     return fig
-
-
-if __name__ == '__main__':
-    avg_abrocas, errors, _ = ABROCAvs_plot('obs_noise', [10 ** i for i in np.arange(-3, 3, 0.2)], s=13,
-                                                        n=[500, 500])
