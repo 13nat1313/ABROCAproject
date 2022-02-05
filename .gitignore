@@ -1,1 +1,8 @@
+.idea # pycharm files
+data
+datasets
+.ipynb_checkpoints
 .DS_Store
+venv
+*.iml
+*.xml

@@ -2,10 +2,10 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
+<<<<<<< HEAD
+=======
+    <orderEntry type="jdk" jdkName="Python 3.6 (ABROCAproject)" jdkType="Python SDK" />
+>>>>>>> d8063fd1cccdb3c528039c4e52f21a27f1e7c83a
     <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-  <component name="PyDocumentationSettings">
-    <option name="format" value="PLAIN" />
-    <option name="myDocStringFormat" value="Plain" />
   </component>
 </module>
