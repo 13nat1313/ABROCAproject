@@ -43,10 +43,6 @@ def get_model(model_type: str):
         return sklearn.linear_model.LogisticRegression(penalty='none')
 
 
-def train_model(model_type: str, X: np.ndarray, y: np.ndarray):
-    model = get_model(model_type)
-
-
 def main():
     df = get_adult_dataset()
     tr, te = sklearn.model_selection.train_test_split(df, test_size=0.1)
