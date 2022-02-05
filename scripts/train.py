@@ -28,17 +28,19 @@ def get_adult_dataset(states=("CA",)):
     features, label, group = folktables.ACSIncome.df_to_numpy(acs_data)
     feature_names = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP',
                      'RELP', 'WKHP', 'SEX', 'RAC1P', ]
-    df = acs_data_to_df(features, label, group)
+    df = acs_data_to_df(features, label, group, feature_names)
     return df
 
 
 def x_y_split(df) -> Tuple[np.ndarray, np.ndarray]:
+    """Split dataframe into X (n,d) and y (n,)."""
     y = df.pop('target').values
     X = df.values
     return X, y
 
 
 def get_model(model_type: str):
+    """Fetch the specified model."""
     if model_type == LR_MODEL:
         return sklearn.linear_model.LogisticRegression(penalty='none')
 
