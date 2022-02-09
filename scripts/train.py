@@ -1,15 +1,17 @@
+import argparse
 import pprint
 from typing import Tuple
 
 import folktables
 import numpy as np
 import pandas as pd
-
 import sklearn
 import sklearn.linear_model
 from sklearn.model_selection import train_test_split
+from sklearn_extra.robust import RobustWeightedClassifier
 
 LR_MODEL = "LR"
+RWC_MODEL = "RWC"
 
 
 def acs_data_to_df(
@@ -52,6 +54,10 @@ def get_model(model_type: str):
     """Fetch the specified model."""
     if model_type == LR_MODEL:
         return sklearn.linear_model.LogisticRegression(penalty='none')
+    elif model_type == RWC_MODEL:
+        return RobustWeightedClassifier(weighting="huber")
+    else:
+        raise ValueError(f"unsupported model type: {model_type}")
 
 
 def evaluate(model: sklearn.linear_model, X_te: np.ndarray, y_te: np.ndarray):
@@ -76,4 +82,7 @@ def main(model_type: str = LR_MODEL):
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_type", default=None, type=str)
+    args = parser.parse_args()
+    main(**vars(args))
