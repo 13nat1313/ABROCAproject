@@ -3,8 +3,8 @@ from sklearn.linear_model import LogisticRegressionCV
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import train_test_split
 
-from abroca import compute_abroca
-from simulation import set_defaults, simulate
+from src.abroca import compute_abroca
+from src.simulation import set_defaults, simulate
 
 
 def ABROCAvs_plot(plot_type, versus, r=10, s=0, n=[10000, 10000], eta_sd=[.1, .1], eta_mean=[0, 0], d=2, mu_0=None, mu_1=None, sigma_0=None, sigma_1=None, theta_0=None, theta_1=None, sigma_scale_factor=1, mu_change=0, orthog_to_boundary=False):

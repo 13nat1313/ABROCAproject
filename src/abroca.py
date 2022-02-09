@@ -1,8 +1,7 @@
 import numpy as np
 from scipy import interpolate
 from scipy import integrate
-
-from simulation import simulate
+from sklearn.metrics import roc_curve
 
 
 def interpolate_roc_fun(fpr, tpr, n_grid):
@@ -33,8 +32,18 @@ def compute_abroca(fpr_0, tpr_0, fpr_1, tpr_1, n_grid=10000, lb=0, ub=1,
     return slice
 
 
-def abroca_from_predictions(y_true, y_pred):
+def abroca_from_predictions(y_true: np.ndarray, y_pred: np.ndarray,
+                            g: np.ndarray) -> float:
+    """Compute ABROCA from ground-truth, predicted labels and group labels."""
+    assert np.all(np.logical_or(g == 1, g == 0)), "expect binary group labels."
+    assert(np.all(y_true.shape==y_pred.shape))
 
+    # Fetch indices of each subgroup.
+    idxs_0 = (g == 0)
+    idxs_1 = (g == 1)
 
-if __name__ == '__main__':
-    simulate()
+    # Compute abroca.
+    fpr_0, tpr_0, _ = roc_curve(y_true=y_true[idxs_0], y_score=y_pred[idxs_0])
+    fpr_1, tpr_1, _ = roc_curve(y_true=y_true[idxs_1], y_score=y_pred[idxs_1])
+    abroca = compute_abroca(fpr_0, tpr_0, fpr_1, tpr_1)
+    return abroca
