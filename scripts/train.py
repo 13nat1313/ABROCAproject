@@ -1,10 +1,12 @@
+import pprint
 from typing import Tuple
 
 import folktables
 import numpy as np
 import pandas as pd
-import sklearn
 
+import sklearn
+import sklearn.linear_model
 from sklearn.model_selection import train_test_split
 
 LR_MODEL = "LR"
@@ -22,9 +24,16 @@ def acs_data_to_df(
     return df
 
 
-def get_adult_dataset(states=("CA",)):
+def get_acs_data_source(year: int):
+    return folktables.ACSDataSource(survey_year=str(year),
+                                    horizon='1-Year',
+                                    survey='person')
+
+
+def get_adult_dataset(states=("CA",), year=2018):
     """Fetch the Adult dataset."""
-    acs_data = folktables.data_source.get_data(states=states, download=True)
+    data_source = get_acs_data_source(year)
+    acs_data = data_source.get_data(states=states, download=True)
     features, label, group = folktables.ACSIncome.df_to_numpy(acs_data)
     feature_names = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP',
                      'RELP', 'WKHP', 'SEX', 'RAC1P', ]
@@ -45,16 +54,25 @@ def get_model(model_type: str):
         return sklearn.linear_model.LogisticRegression(penalty='none')
 
 
-def main():
+def evaluate(model: sklearn.linear_model, X_te: np.ndarray, y_te: np.ndarray):
+    """Compute classification metrics for the model."""
+    y_hat_probs = model.predict_proba(X_te)
+    loss = sklearn.metrics.log_loss(y_true=y_te, y_pred=y_hat_probs)
+    # TODO(jpgard): compute and return abroca here.
+    return {"loss": loss}
+
+
+def main(model_type: str = LR_MODEL):
     df = get_adult_dataset()
     tr, te = sklearn.model_selection.train_test_split(df, test_size=0.1)
     X_tr, y_tr = x_y_split(tr)
     X_te, y_te = x_y_split(te)
 
-    model = get_model(LR_MODEL)
+    model = get_model(model_type)
     model.fit(X_tr, y_tr)
-
-    # TODO(jpgard): compute ABROCA on test data after refactor.
+    metrics = evaluate(model, X_te, y_te)
+    print(f"metrics for model_type {model_type}:")
+    pprint.pprint(metrics)
 
 
 if __name__ == "__main__":
