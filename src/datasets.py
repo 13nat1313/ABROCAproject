@@ -1,4 +1,5 @@
 import folktables
+from folktables.acs import adult_filter
 import numpy as np
 import pandas as pd
 
@@ -25,8 +26,20 @@ def get_adult_dataset(states=("CA",), year=2018):
     """Fetch the Adult dataset."""
     data_source = get_acs_data_source(year)
     acs_data = data_source.get_data(states=states, download=True)
-    features, label, group = folktables.ACSIncome.df_to_numpy(acs_data)
     feature_names = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP',
                      'RELP', 'WKHP', 'SEX', 'RAC1P', ]
+    problem = folktables.BasicProblem(
+        features=feature_names,
+        target='PINCP',
+        target_transform=lambda x: x > 50000,
+        group='RAC1P',
+        # 'White alone' vs. all other categories (RAC1P) or
+        # 'Male' vs. Female (SEX)
+        group_transform=lambda x: x == 1,
+        preprocess=adult_filter,
+        postprocess=lambda x: np.nan_to_num(x, -1),
+    )
+    features, label, group = problem.df_to_numpy(acs_data)
+
     df = acs_data_to_df(features, label, group, feature_names)
     return df
