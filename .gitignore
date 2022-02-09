@@ -5,6 +5,7 @@ datasets
 .ipynb_checkpoints
 .DS_Store
 venv
+__pycache__/
 *.iml
 *.xml
 # Default ignored files
