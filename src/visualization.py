@@ -1,91 +1,12 @@
 import numpy as np
-import math
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.linear_model import LogisticRegressionCV
 from sklearn.metrics import roc_curve, auc
-from scipy.special import expit
-from scipy import interpolate
-from scipy import integrate
+from sklearn.model_selection import train_test_split
+
 from scipy.stats import sem
 
-
-# create configuration object
-
-def interpolate_roc_fun(fpr, tpr, n_grid):
-    """https://github.com/VaibhavKaushik3220/abroca/blob/main/abroca/compute_abroca.py"""
-    roc_approx = interpolate.interp1d(x=fpr, y=tpr)
-    x_new = np.linspace(0, 1, num=n_grid)
-    y_new = roc_approx(x_new)
-    return x_new, y_new
-
-
-def compute_abroca(fpr_0, tpr_0, fpr_1, tpr_1, n_grid=10000, lb=0, ub=1, limit=1000):
-    """https://github.com/VaibhavKaushik3220/abroca/blob/main/abroca/compute_abroca.py"""
-    # Compute the value of the abroca statistic.
-
-    # compare minority to majority class; accumulate absolute difference btw ROC curves to slicing statistic
-    majority_roc_x, majority_roc_y = interpolate_roc_fun(fpr_0, tpr_0, n_grid)
-    minority_roc_x, minority_roc_y = interpolate_roc_fun(fpr_1, tpr_1, n_grid)
-
-    # use function approximation to compute slice statistic via piecewise linear function
-    assert list(majority_roc_x) == list(minority_roc_x), "Majority and minority FPR are different"
-    f1 = interpolate.interp1d(x=majority_roc_x, y=(majority_roc_y - minority_roc_y))
-    f2 = lambda x, acc: abs(f1(x))
-    slice, _ = integrate.quad(f2, lb, ub, limit)
-
-    return slice
-
-
-def set_defaults(d, mu_0, mu_1, sigma_0, sigma_1, theta_0, theta_1, eta_sd, eta_mean):
-    if mu_0 is None:
-        mu_0 = np.zeros(d)
-    if mu_1 is None:
-        mu_1 = np.zeros(d)
-    if sigma_0 is None:
-        sigma_0 = np.ones(d)
-    if sigma_1 is None:
-        sigma_1 = np.ones(d)
-    if theta_0 is None:
-        theta_0 = np.ones(d)
-    if theta_1 is None:
-        theta_1 = np.ones(d)
-
-    assert len(mu_0) == len(mu_1) == len(sigma_0) == len(sigma_1) == len(theta_0) == len(
-        theta_1), 'number of covariates not consistent'
-    assert len(eta_sd) == len(eta_mean), 'num of groups not consistent'
-
-    return mu_0, mu_1, sigma_0, sigma_1, theta_0, theta_1
-
-
-def simulate(n=10000, p_0=.5, eta_sd=np.full(2, .1), eta_mean=np.zeros(2), d=2, mu_0=None, mu_1=None, sigma_0=None,
-             sigma_1=None, theta_0=None, theta_1=None, sigma_scale_factor=1, mu_change=0, orthog_to_boundary=False):
-    mu_0, mu_1, sigma_0, sigma_1, theta_0, theta_1 = set_defaults(d, mu_0, mu_1, sigma_0, sigma_1, theta_0, theta_1,
-                                                                  eta_sd, eta_mean)
-
-    if d == 2:
-        if orthog_to_boundary:
-            mu_1 = [mu_1[0] + mu_change, mu_1[1] + mu_change]
-        else:
-            mu_1 = [mu_1[0] + mu_change, mu_1[1] - mu_change]
-
-    mu = [np.array(mu_0), np.array(mu_1)]
-    sigma = [np.diag(sigma_0), np.diag(np.dot(sigma_1, sigma_scale_factor))]
-    theta = [np.array([theta_0]), np.array([theta_1])]
-    X = np.array([])
-    y = np.array([])
-
-    subgroup_n = [int(round(n * p_0)), int(round(n * (1 - p_0)))]
-    for i in range(2):
-        n_i = subgroup_n[i]
-        ax = np.random.multivariate_normal(mu[i], sigma[i], size=n_i)
-        X = np.append(X.reshape((-1, len(mu_0))), ax, axis=0)
-        aeta = np.random.normal(eta_mean[i], eta_sd[i], n_i).reshape((-1, 1))
-        ap = expit(np.sum(theta[i] * ax, axis=1) + aeta)
-        ay = np.less_equal(np.random.uniform(size=len(ap)), ap)
-        y = np.append(y, ay, axis=0)
-    return X, y
+from src.abroca import compute_abroca
+from src.simulation import set_defaults, simulate
 
 
 def regress(X, y, n, p_0):
