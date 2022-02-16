@@ -18,4 +18,4 @@ __pycache__/
 /httpRequests/
 .idea/.gitignore
 # other
-figures/
+/figures/
