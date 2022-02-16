@@ -17,3 +17,5 @@ __pycache__/
 # Editor-based HTTP Client requests
 /httpRequests/
 .idea/.gitignore
+# other
+figures/
