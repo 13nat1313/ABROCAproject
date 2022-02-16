@@ -1,11 +1,12 @@
 import numpy as np
-from sklearn.linear_model import LogisticRegressionCV
+from matplotlib import pyplot as plt
+from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import train_test_split
 
 from scipy.stats import sem
 
-from src.abroca import compute_abroca
+from src.abroca import compute_abroca, abroca_from_predictions
 from src.simulation import set_defaults, simulate
 
 
@@ -14,23 +15,25 @@ def regress(X, y, n, p_0):
     X_train_0, X_test_0, y_train_0, y_test_0 = train_test_split(X[:n_0], y[:n_0], test_size=0.2, random_state=0)
     X_train_1, X_test_1, y_train_1, y_test_1 = train_test_split(X[n_0:], y[n_0:], test_size=0.2, random_state=0)
 
+    if len(set(y_test_0)) == 1 or len(set(y_test_1)) == 1:
+        return
+
     X_train = np.append(X_train_0, X_train_1, axis=0)
     y_train = np.append(y_train_0, y_train_1, axis=0)
+    y_test = np.append(y_test_0, y_test_1, axis=0)
 
     if len(set(y_train)) == 1:
         return
 
     # regressor = RandomForestRegressor(n_estimators = 10, random_state=0)
-    regressor = LogisticRegression()
+    regressor = LogisticRegression(solver='lbfgs')
     # regressor = LogisticRegressionCV(cv=5)
     perm = np.random.permutation(len(y_train))
     regressor.fit(X_train[perm], y_train[perm])
 
     y_pred_0 = regressor.predict(X_test_0)
     y_pred_1 = regressor.predict(X_test_1)
-
-    if len(set(y_test_0)) == 1 or len(set(y_test_1)) == 1:
-        return
+    y_pred = np.append(y_pred_0, y_pred_1, axis=0)
 
     fpr_0, tpr_0, _ = roc_curve(y_test_0, y_pred_0)
     fpr_1, tpr_1, _ = roc_curve(y_test_1, y_pred_1)
@@ -74,7 +77,7 @@ def ABROCAvs_plot(plot_type, versus, r=10, s=0, n=10000, p_0=.5, eta_sd=np.full(
             if reg is None:
                 continue
             else:
-                fpr_0, tpr_0, fpr_1, tpr_1, g0auc, g1auc, abroca = reg
+                _, _, _, _, _, _, abroca = reg
 
             abrocas[j] = abroca
 

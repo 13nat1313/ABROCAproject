@@ -44,7 +44,7 @@ def simulate(n=10000, p_0=.5, eta_sd=np.full(2, .1), eta_mean=np.zeros(2), d=2, 
         ax = np.random.multivariate_normal(mu[i], sigma[i], size=n_i)
         X = np.append(X.reshape((-1, d)), ax, axis=0)
         aeta = np.random.normal(eta_mean[i], eta_sd[i], n_i).reshape((-1, 1))
-        ap = expit(np.sum(theta[i] * ax, axis=1) + aeta)
+        ap = expit(np.sum(np.append(theta[i] * ax, aeta, axis=1), axis=1))
         ay = np.less_equal(np.random.uniform(size=len(ap)), ap)
         y = np.append(y, ay, axis=0)
     return X, y

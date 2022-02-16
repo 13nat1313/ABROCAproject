@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import interpolate
 from scipy import integrate
-from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_curve, auc
 
 
 def interpolate_roc_fun(fpr, tpr, n_grid):
@@ -45,5 +45,6 @@ def abroca_from_predictions(y_true: np.ndarray, y_pred: np.ndarray,
     # Compute abroca.
     fpr_0, tpr_0, _ = roc_curve(y_true=y_true[idxs_0], y_score=y_pred[idxs_0])
     fpr_1, tpr_1, _ = roc_curve(y_true=y_true[idxs_1], y_score=y_pred[idxs_1])
+
     abroca = compute_abroca(fpr_0, tpr_0, fpr_1, tpr_1)
     return abroca
