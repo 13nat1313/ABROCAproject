@@ -2,48 +2,61 @@ import numpy as np
 from scipy.special import expit
 
 
-def set_defaults(d, mu_0, mu_1, sigma_0, sigma_1, theta_0, theta_1, eta_sd, eta_mean):
-    if mu_0 is None:
-        mu_0 = np.zeros(d)
-    if mu_1 is None:
-        mu_1 = np.zeros(d)
-    if sigma_0 is None:
-        sigma_0 = np.ones(d)
-    if sigma_1 is None:
-        sigma_1 = np.ones(d)
-    if theta_0 is None:
-        theta_0 = np.ones(d)
-    if theta_1 is None:
-        theta_1 = np.ones(d)
+class SimulationParams:
+    def __init__(self, d: int = 2, n: int = 10000, p_0: float = 0.5, eta_sd: np.ndarray = np.full(2, 0.1), eta_mean: np.ndarray = np.zeros(2), mu_0: np.ndarray = None, mu_1: np.ndarray = None, sigma_0: np.ndarray = None, sigma_1: np.ndarray = None, theta_0: np.ndarray = None, theta_1: np.ndarray = None, sigma_scale_factor: float = 1, mu_change: float = 0, orthog_to_boundary: bool = False):
+        self.d = d
+        self.n = n
+        self.p_0 = p_0
+        self.eta_sd = eta_sd
+        self.eta_mean = eta_mean
+        self.mu_0 = np.zeros(self.d) if mu_0 is None else mu_0
+        self.mu_1 = np.zeros(self.d) if mu_1 is None else mu_1
+        self.sigma_0 = np.ones(self.d) if sigma_0 is None else sigma_0
+        self.sigma_1 = np.ones(self.d) if sigma_1 is None else sigma_1
+        self.theta_0 = np.ones(self.d) if theta_0 is None else theta_0
+        self.theta_1 = np.ones(self.d) if theta_1 is None else theta_1
+        self.sigma_scale_factor = sigma_scale_factor
+        self.mu_change = mu_change
+        self.orthog_to_boundary = orthog_to_boundary
 
-    assert len(mu_0) == len(mu_1) == len(sigma_0) == len(sigma_1) == len(theta_0) == len(theta_1) == d, 'number of covariates not consistent'
-    assert len(eta_sd) == len(eta_mean) == 2, 'number of groups not consistent'
+        assert len(self.mu_0) == len(self.mu_1) == len(self.sigma_0) == len(self.sigma_1) == len(self.theta_0) == len(
+            self.theta_1) == self.d, 'number of covariates not consistent'
+        assert len(self.eta_sd) == len(self.eta_mean) == 2, 'number of groups not consistent'
 
-    return mu_0, mu_1, sigma_0, sigma_1, theta_0, theta_1
-
-
-def simulate(n=10000, p_0=.5, eta_sd=np.full(2, .1), eta_mean=np.zeros(2), d=2, mu_0=None, mu_1=None, sigma_0=None, sigma_1=None, theta_0=None, theta_1=None, sigma_scale_factor=1, mu_change=0, orthog_to_boundary=False):
-    mu_0, mu_1, sigma_0, sigma_1, theta_0, theta_1 = set_defaults(d, mu_0, mu_1, sigma_0, sigma_1, theta_0, theta_1, eta_sd, eta_mean)
-
-    if d==2:
-        if orthog_to_boundary:
-            mu_1 = [mu_1[0]+mu_change, mu_1[1]+mu_change]
+        self.mu_0 = np.array(self.mu_0)
+        if self.orthog_to_boundary:
+            self.mu_1 = np.array(self.mu_1) + (np.array(self.theta_1) * self.mu_change)
         else:
-            mu_1 = [mu_1[0]+mu_change, mu_1[1]-mu_change]
+            v = np.ones(len(self.theta_1) - 1)
+            total = 0
+            for i, v_i in enumerate(v):
+                total += self.theta_1[i] * v_i
+            z = total / (-self.theta_1[-1])
+            v = np.append(v, z)
+            self.mu_1 = np.array(self.mu_1) + (v * self.mu_change)
+        self.sigma_0 = np.diag(self.sigma_0)
+        self.sigma_1 = np.diag(np.dot(self.sigma_1, self.sigma_scale_factor))
+        self.theta_0 = np.array([self.theta_0])
+        self.theta_1 = np.array([self.theta_1])
 
-    mu = [np.array(mu_0), np.array(mu_1)]
-    sigma = [np.diag(sigma_0), np.diag(np.dot(sigma_1, sigma_scale_factor))]
-    theta = [np.array([theta_0]), np.array([theta_1])]
+
+def simulate(dflts: SimulationParams = None):
+    if dflts is None:
+        dflts = SimulationParams()
+
+    mu = [dflts.mu_0, dflts.mu_1]
+    sigma = [dflts.sigma_0, dflts.sigma_1]
+    theta = [dflts.theta_0, dflts.theta_1]
 
     X = np.array([])
     y = np.array([])
 
-    subgroup_n = [int(round(n * p_0)), int(round(n * (1 - p_0)))]
+    subgroup_n = [int(round(dflts.n * dflts.p_0)), int(round(dflts.n * (1 - dflts.p_0)))]
     for i in range(2):
         n_i = subgroup_n[i]
         ax = np.random.multivariate_normal(mu[i], sigma[i], size=n_i)
-        X = np.append(X.reshape((-1, d)), ax, axis=0)
-        aeta = np.random.normal(eta_mean[i], eta_sd[i], n_i).reshape((-1, 1))
+        X = np.append(X.reshape((-1, dflts.d)), ax, axis=0)
+        aeta = np.random.normal(dflts.eta_mean[i], dflts.eta_sd[i], n_i).reshape((-1, 1))
         ap = expit(np.sum(np.append(theta[i] * ax, aeta, axis=1), axis=1))
         ay = np.less_equal(np.random.uniform(size=len(ap)), ap)
         y = np.append(y, ay, axis=0)
