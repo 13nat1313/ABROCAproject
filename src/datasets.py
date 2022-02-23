@@ -1,5 +1,6 @@
 from typing import Tuple
 import folktables
+import sklearn
 from folktables.acs import adult_filter
 import numpy as np
 import pandas as pd
@@ -95,3 +96,26 @@ def get_adult_dataset(states=("CA",), year=2018):
 
     df = acs_data_to_df(features, label, group, feature_names)
     return df
+
+
+def x_y_split(df) -> Tuple[np.ndarray, np.ndarray]:
+    """Split dataframe into X (n,d) and y (n,)."""
+    y = df.pop('target').values
+    X = df.values
+    return X, y
+
+
+def x_y_g_split(df) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Split dataframe into X (n,d) and y (n,)."""
+    y = df.pop('target').values
+    g = df.pop('sensitive').values
+    X = df.values
+    return X, y, g
+
+
+def train_test_split(df, test_size: float = 0.1
+                     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    tr, te = sklearn.model_selection.train_test_split(df, test_size=test_size)
+    tr.reset_index(inplace=True, drop=True)
+    te.reset_index(inplace=True, drop=True)
+    return tr, te
