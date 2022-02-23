@@ -1,3 +1,4 @@
+import os
 from typing import Tuple
 import folktables
 import sklearn
@@ -5,6 +6,10 @@ from folktables.acs import adult_filter
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing
+
+ADULT_DATASET = "adult"
+AFFECT_DATASET = "affect"
+VALID_DATASETS = (ADULT_DATASET, AFFECT_DATASET)
 
 
 def assert_no_nan(df, msg: str):
@@ -98,6 +103,64 @@ def get_adult_dataset(states=("CA",), year=2018):
     return df
 
 
+# Valid feature columns to use from the affect dataset.
+affect_feature_columns = [
+    "avg_attemptCount", "avg_bottomHint", "avg_correct",
+    "avg_frIsHelpRequest", "avg_frPast5HelpRequest",
+    "avg_frPast5WrongCount", "avg_frPast8HelpRequest",
+    "avg_frPast8WrongCount", "avg_frWorkingInSchool", "avg_hint",
+    "avg_hintCount", "avg_hintTotal", "avg_original", "avg_past8BottomOut",
+    "avg_scaffold", "avg_stlHintUsed", "avg_timeSinceSkill",
+    "avg_timeTaken", "avg_totalFrAttempted", "avg_totalFrPastWrongCount",
+    "avg_totalFrPercentPastWrong", "avg_totalFrSkillOpportunities",
+    "avg_totalFrTimeOnSkill", "max_attemptCount", "max_bottomHint",
+    "max_correct", "max_frIsHelpRequest", "max_frPast5HelpRequest",
+    "max_frPast5WrongCount", "max_frPast8HelpRequest",
+    "max_frPast8WrongCount", "max_frWorkingInSchool", "max_hint",
+    "max_hintCount", "max_hintTotal", "max_original", "max_past8BottomOut",
+    "max_scaffold", "max_stlHintUsed", "max_timeSinceSkill",
+    "max_timeTaken", "max_totalFrAttempted", "max_totalFrPastWrongCount",
+    "max_totalFrPercentPastWrong", "max_totalFrSkillOpportunities",
+    "max_totalFrTimeOnSkill", "min_attemptCount", "min_bottomHint",
+    "min_correct", "min_frIsHelpRequest", "min_frPast5HelpRequest",
+    "min_frPast5WrongCount", "min_frPast8HelpRequest",
+    "min_frPast8WrongCount", "min_frWorkingInSchool", "min_hint",
+    "min_hintCount", "min_hintTotal", "min_original", "min_past8BottomOut",
+    "min_scaffold", "min_stlHintUsed", "min_timeSinceSkill",
+    "min_timeTaken", "min_totalFrAttempted", "min_totalFrPastWrongCount",
+    "min_totalFrPercentPastWrong", "min_totalFrSkillOpportunities",
+    "min_totalFrTimeOnSkill", "sum_attemptCount", "sum_bottomHint",
+    "sum_correct", "sum_frIsHelpRequest", "sum_frPast5HelpRequest",
+    "sum_frPast5WrongCount", "sum_frPast8HelpRequest",
+    "sum_frPast8WrongCount", "sum_frWorkingInSchool", "sum_hint",
+    "sum_hintCount", "sum_hintTotal", "sum_original", "sum_past8BottomOut",
+    "sum_scaffold", "sum_stlHintUsed", "sum_timeSinceSkill",
+    "sum_timeTaken", "sum_totalFrAttempted", "sum_totalFrPastWrongCount",
+    "sum_totalFrPercentPastWrong", "sum_totalFrSkillOpportunities",
+    "sum_totalFrTimeOnSkill"
+]
+
+
+def get_affect_dataset(dataset_root="./datasets", label_colname="on_task",
+                       urbanicity_pos_class=1):
+    """
+    Affect dataset, with urbanicity. See tiny.cc/affectdata.
+    :param dataset_root: path to directory containing the CSV file.
+    :param label_colname: name of the column to use as targets.
+    :param urbanicity_pos_class: class to use as the positive indicator for
+        the sensitive attribute (g is 1 if == urbanicity_pos_class, else 0).
+    """
+    fp = os.path.join(dataset_root,
+                      "affect_features_and_labels_folded_all_timesteps.csv")
+    usecols = affect_feature_columns + [label_colname, "urbanicity"]
+    df = pd.read_csv(fp, usecols=usecols)
+    df.rename(columns={"urbanicity": "sensitive", label_colname: "target"},
+              inplace=True)
+    df.dropna(inplace=True)
+    df.sensitive = df.sensitive.apply(lambda x: x == urbanicity_pos_class)
+    return df
+
+
 def x_y_split(df) -> Tuple[np.ndarray, np.ndarray]:
     """Split dataframe into X (n,d) and y (n,)."""
     y = df.pop('target').values
@@ -119,3 +182,13 @@ def train_test_split(df, test_size: float = 0.1
     tr.reset_index(inplace=True, drop=True)
     te.reset_index(inplace=True, drop=True)
     return tr, te
+
+
+def get_dataset(dataset_name: str):
+    if dataset_name == ADULT_DATASET:
+        df = get_adult_dataset()
+    elif dataset_name == AFFECT_DATASET:
+        df = get_affect_dataset()
+    else:
+        raise NotImplementedError(f"dataset {dataset_name} not implemented.")
+    return df

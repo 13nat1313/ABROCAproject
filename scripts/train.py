@@ -7,11 +7,10 @@ import sklearn
 import sklearn.linear_model
 from fairlearn.reductions import ExponentiatedGradient
 
-from datasets import x_y_g_split, train_test_split
-from models import get_model, LR_MODEL, VALID_MODELS
+from src.datasets import ADULT_DATASET, VALID_DATASETS, get_dataset
+from src.models import get_model, LR_MODEL, VALID_MODELS
 from src.abroca import abroca_from_predictions
-
-from src.datasets import get_adult_dataset, make_dummy_cols, scale_data
+from src import datasets
 
 
 def evaluate(model: sklearn.linear_model, X_te: np.ndarray, y_te: np.ndarray,
@@ -34,16 +33,17 @@ def fit(model, X: np.ndarray, y: np.ndarray, g: np.ndarray = None):
     return model
 
 
-def main(model_type: str = LR_MODEL, scale=True, make_dummies=True):
+def main(model_type: str = LR_MODEL, dataset_name: str = ADULT_DATASET,
+         scale=True, make_dummies=True):
     start = time.time()
-    df = get_adult_dataset()
-    tr, te = train_test_split(df)
+    df = get_dataset(dataset_name)
+    tr, te = datasets.train_test_split(df)
     if scale:
-        tr, te = scale_data(df_tr=tr, df_te=te)
+        tr, te = datasets.scale_data(df_tr=tr, df_te=te)
     if make_dummies:
-        tr, te = make_dummy_cols(df_tr=tr, df_te=te)
-    X_tr, y_tr, g_tr = x_y_g_split(tr)
-    X_te, y_te, g_te = x_y_g_split(te)
+        tr, te = datasets.make_dummy_cols(df_tr=tr, df_te=te)
+    X_tr, y_tr, g_tr = datasets.x_y_g_split(tr)
+    X_te, y_te, g_te = datasets.x_y_g_split(te)
 
     model = get_model(model_type)
     model = fit(model, X_tr, y_tr, g_tr)
@@ -57,5 +57,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_type", default=None, type=str,
                         choices=VALID_MODELS)
+    parser.add_argument("--dataset_name", default=ADULT_DATASET, type=str,
+                        choices=VALID_DATASETS)
     args = parser.parse_args()
     main(**vars(args))
