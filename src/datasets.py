@@ -1,7 +1,57 @@
+from typing import Tuple
 import folktables
 from folktables.acs import adult_filter
 import numpy as np
 import pandas as pd
+from sklearn import preprocessing
+
+
+def assert_no_nan(df, msg: str):
+    assert pd.isnull(df).values.sum() == 0, msg
+    return
+
+
+def scale_data(df_tr, df_te, TGT="target", SENS="sensitive"):
+    """Scale numeric train/test data columns using the *train* data statistics.
+    """
+    assert_no_nan(df_tr, "null values detected in training data; cannot scale")
+    assert_no_nan(df_te, "null values detected in test data; cannot scale")
+
+    scaler = preprocessing.StandardScaler()
+    columns_to_scale = [c for c, dtype in df_tr.dtypes.items()
+                        if c not in (TGT, SENS)
+                        and dtype != 'object']
+    unscaled_columns = set(df_tr.columns) - set(columns_to_scale)
+    df_tr_scaled = pd.DataFrame(scaler.fit_transform(df_tr[columns_to_scale]),
+                                columns=columns_to_scale)
+    df_tr_out = pd.concat((df_tr_scaled, df_tr[unscaled_columns]), axis=1)
+    df_te_scaled = pd.DataFrame(scaler.transform(df_te[columns_to_scale]),
+                                columns=columns_to_scale)
+    df_te_out = pd.concat((df_te_scaled, df_te[unscaled_columns]), axis=1)
+
+    # Check that no null values were introduced
+    assert_no_nan(df_tr_out, "null values introduced during scaling")
+    assert_no_nan(df_te_out, "null values introduced during scaling")
+    return df_tr_out, df_te_out
+
+
+def make_dummy_cols(df_tr, df_te, drop_first=True) -> Tuple[
+    pd.DataFrame, pd.DataFrame]:
+    assert_no_nan(df_tr, "nan values detected in train data")
+    assert_no_nan(df_te, "nan values detected in test data")
+
+    n_train = len(df_tr)
+
+    # Concatenate for dummy creation, so all columns are in both splits.
+    df = pd.concat((df_tr, df_te))
+    df_dummies = pd.get_dummies(df, drop_first=drop_first)
+    df_tr_out = df_dummies[:n_train]
+    df_te_out = df_dummies[n_train:]
+
+    assert_no_nan(df_tr_out, "nan values introduced in train data")
+    assert_no_nan(df_te_out, "nan values introduced in test data")
+
+    return df_tr_out, df_te_out
 
 
 def acs_data_to_df(
@@ -27,7 +77,9 @@ def get_adult_dataset(states=("CA",), year=2018):
     data_source = get_acs_data_source(year)
     acs_data = data_source.get_data(states=states, download=True)
     feature_names = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP',
-                     'RELP', 'WKHP', 'SEX', 'RAC1P', ]
+                     'RELP', 'WKHP',
+                     # 'SEX', 'RAC1P',
+                     ]
     problem = folktables.BasicProblem(
         features=feature_names,
         target='PINCP',
