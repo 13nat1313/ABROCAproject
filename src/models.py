@@ -18,13 +18,18 @@ EO_REDUCTION = "EO_REDUCTION"
 VALID_MODELS = [LR_MODEL, RWC_MODEL, EO_REDUCTION, L2LR_MODEL]
 
 
-def get_model(model_type: str):
+def get_model(model_type: str, use_balanced: bool = False):
     """Fetch the specified model."""
     if model_type == LR_MODEL:
-        return sklearn.linear_model.LogisticRegression(penalty='none')
+        return sklearn.linear_model.LogisticRegression(
+            penalty='none',
+            class_weight="balanced" if use_balanced else None)
     elif model_type == L2LR_MODEL:
-        return sklearn.linear_model.LogisticRegressionCV(penalty='l2')
-    elif model_type == EO_REDUCTION:
+        return sklearn.linear_model.LogisticRegressionCV(
+            penalty='l2',
+            class_weight="balanced" if use_balanced else None)
+    assert not use_balanced, "use_balanced only supported for LR/L2LR"
+    if model_type == EO_REDUCTION:
         base_estimator = sklearn.linear_model.LogisticRegression()
         constraint = EqualizedOdds()
         model = ExponentiatedGradientWrapper(base_estimator, constraint)
