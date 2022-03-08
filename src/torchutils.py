@@ -113,8 +113,7 @@ def get_optimizer(type, model, **opt_kwargs):
 def subgroup_loss(preds, labels, g, group_label: int) -> torch.Tensor:
     loss = binary_cross_entropy(preds, labels)
     subgroup_mask = (g == group_label).double()
-    # TODO(jpgard): this should really be a masked sum.
-    return torch.mean(loss * subgroup_mask)
+    return torch.sum(loss * subgroup_mask) / torch.sum(subgroup_mask)
 
 
 def compute_disparity_metrics(preds, labels, sens, prefix=""):
