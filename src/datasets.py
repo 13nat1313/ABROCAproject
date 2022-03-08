@@ -215,7 +215,7 @@ def get_affect_dataset(dataset_root="./datasets", label_colname="confusion",
     df.rename(columns={"urbanicity": "sensitive", label_colname: "target"},
               inplace=True)
     df.dropna(inplace=True)
-    df.sensitive = df.sensitive.apply(lambda x: x == sens_pos_class)
+    df.sensitive = df.sensitive.apply(lambda x: x == sens_pos_class).astype(float)
     return df
 
 

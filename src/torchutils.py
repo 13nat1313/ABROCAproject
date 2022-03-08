@@ -9,9 +9,9 @@ import pandas as pd
 import torch.nn as nn
 from torch.nn.functional import mse_loss
 import wandb
-
-from src.utils import LOG_LEVEL
 from src.fastdro.robust_losses import RobustLoss
+
+LOG_LEVEL = logging.DEBUG
 
 logger = logging.getLogger()
 logging.basicConfig(
@@ -20,8 +20,8 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-def pd_to_torch_float(df) -> torch.Tensor:
-    return torch.from_numpy(df.values).float()
+def np_to_torch_float(ary) -> torch.Tensor:
+    return torch.from_numpy(ary).float()
 
 
 def safe_cast_to_numpy(ary):
@@ -35,21 +35,21 @@ def safe_cast_to_numpy(ary):
         raise NotImplementedError(f"unsupported type: {type(ary)}")
 
 
-def dataframes_to_dataset(X, y, use_group=False):
+def arys_to_dataset(X, y, g, use_group=False):
     if use_group:
         return torch.utils.data.TensorDataset(
-            pd_to_torch_float(X),
-            pd_to_torch_float(y),
-            pd_to_torch_float(X['sensitive']))
+            np_to_torch_float(X),
+            np_to_torch_float(y),
+            np_to_torch_float(g))
     else:
         return torch.utils.data.TensorDataset(
-            pd_to_torch_float(X),
-            pd_to_torch_float(y))
+            np_to_torch_float(X),
+            np_to_torch_float(y), )
 
 
-def dataframes_to_loader(X: pd.DataFrame, y: pd.DataFrame, batch_size: int,
-                         shuffle=True, drop_last=False, use_group=False):
-    dataset = dataframes_to_dataset(X, y, use_group=use_group)
+def arys_to_loader(X: pd.DataFrame, y: pd.DataFrame, g, batch_size: int,
+                   shuffle=True, drop_last=False, use_group=False):
+    dataset = arys_to_dataset(X, y, g, use_group=use_group)
     loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                          shuffle=shuffle, drop_last=drop_last)
     return loader
@@ -64,6 +64,16 @@ CLV_CRITERION = "coarse_loss_variance"
 # optimizer names
 SGD_OPT = "sgd"
 ADAM_OPT = "adam"
+
+
+def get_optimizer(type, model, **opt_kwargs):
+    logging.info(f"fetching optimizer {type} with opt_kwargs {opt_kwargs}")
+    if type == SGD_OPT:
+        return torch.optim.SGD(model.parameters(), **opt_kwargs)
+    elif type == ADAM_OPT:
+        return torch.optim.Adam(model.parameters(), **opt_kwargs)
+    else:
+        raise NotImplementedError
 
 
 def get_criterion(criterion_name: str, **kwargs) -> Callable:
@@ -123,7 +133,7 @@ def compute_disparity_metrics(preds, labels, sens, prefix=""):
     if prefix != "":
         prefix += "_"
     if isinstance(labels, pd.Series) or isinstance(labels, pd.DataFrame):
-        labels = pd_to_torch_float(labels)
+        labels = np_to_torch_float(labels)
     metrics = {}
     for g in (0, 1):
         mse_g = subgroup_mse(preds, labels, sens, group_label=g)
@@ -159,7 +169,7 @@ class PytorchRegressor(nn.Module):
 
     def predict(self, x):
         if isinstance(x, pd.DataFrame) or isinstance(x, pd.Series):
-            x = pd_to_torch_float(x)
+            x = np_to_torch_float(x)
         return self.forward(x)
 
     def print_summary(self, global_step: int, metrics):
@@ -171,7 +181,7 @@ class PytorchRegressor(nn.Module):
                 "metrics for model {} at step {}: {}".format(
                     self.model_type, global_step, metrics_str))
 
-    def fit(self, X_tr, y_tr, X_val, y_val, optimizer, steps: int,
+    def fit(self, X_tr, y_tr, g_tr, X_val, y_val, g_val, optimizer, steps: int,
             scheduler=None,
             batch_size=64,
             cutoff_step=1e4,
@@ -182,6 +192,7 @@ class PytorchRegressor(nn.Module):
 
         :param X_tr: training data.
         :param y_tr: training labels.
+        :param g_tr: training group labels.
         :param X_val: validation data.
         :param y_val: validation labels.
         :param optimizer: optimizer.
@@ -197,14 +208,9 @@ class PytorchRegressor(nn.Module):
         :param sample_weight:
         :return: None.
         """
-
-        # TODO(jpgard): for fastdro model, add iterate averaging
-        #  via fastdro.average_step(); this is described in
-        #  Sec F.2, p.54 of https://arxiv.org/pdf/2010.05893.pdf
-
-        sens_val = pd_to_torch_float(X_val["sensitive"])
-        X_val = pd_to_torch_float(X_val)
-        y_val = pd_to_torch_float(y_val)
+        X_val = np_to_torch_float(X_val)
+        y_val = np_to_torch_float(y_val)
+        g_val = np_to_torch_float(g_val)
 
         if sample_weight is not None:
             raise ValueError("sample weight is not supported;"
@@ -218,8 +224,8 @@ class PytorchRegressor(nn.Module):
         global_step = 0
 
         while True:
-            loader = dataframes_to_loader(X_tr, y_tr, batch_size=batch_size,
-                                          use_group=True)
+            loader = arys_to_loader(X_tr, y_tr, g_tr, batch_size=batch_size,
+                                    use_group=True)
             for batch_idx, batch in enumerate(loader):
                 cur = time.time()
                 data, labels, sens = batch
@@ -244,7 +250,7 @@ class PytorchRegressor(nn.Module):
                     val_mse = mse_loss(outputs_val, y_val,
                                        reduction="mean")
                     disparity_val_metrics = compute_disparity_metrics(
-                        outputs_val, y_val, sens_val, "val")
+                        outputs_val, y_val, g_val, "val")
                 log_metrics = {
                     "train_loss": loss.item(),
                     "train_mse": train_mse.item(),
