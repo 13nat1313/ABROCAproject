@@ -7,7 +7,8 @@ import torch
 import numpy as np
 import pandas as pd
 import torch.nn as nn
-from torch.nn.functional import mse_loss
+import torch.nn.functional as F
+from torch.nn.functional import binary_cross_entropy
 import wandb
 from src.fastdro.robust_losses import RobustLoss
 
@@ -55,11 +56,9 @@ def arys_to_loader(X: pd.DataFrame, y: pd.DataFrame, g, batch_size: int,
     return loader
 
 
-# criterion_name names
-MSE_CRITERION = "mse"
+# criterion names
+DEFAULT_CRITERION = "ce"
 FASTDRO_CRITERION = "fastdro"
-LVR_CRITERION = "loss_variance"
-CLV_CRITERION = "coarse_loss_variance"
 
 # optimizer names
 SGD_OPT = "sgd"
@@ -79,8 +78,8 @@ def get_optimizer(type, model, **opt_kwargs):
 def get_criterion(criterion_name: str, **kwargs) -> Callable:
     logging.info(f"Received the following criterion parameters: {kwargs}")
     # Mean squared error
-    if criterion_name == MSE_CRITERION:
-        return torch.nn.MSELoss()
+    if criterion_name == DEFAULT_CRITERION:
+        return torch.nn.CrossEntropyLoss()
 
     # Fast DRO, using MSE_CRITERION
     elif criterion_name == FASTDRO_CRITERION:
@@ -92,23 +91,11 @@ def get_criterion(criterion_name: str, **kwargs) -> Callable:
         )
 
         def _loss_fn(outputs, targets):
-            # taken from https://github.com/daniellevy/fast-dro/\
-            # blob/dc75246ed5df5c40a54990916ec351ec2b9e0d86/train.py#L343
-            return robust_loss((outputs.squeeze() - targets) ** 2)
+            return robust_loss(binary_cross_entropy(outputs, targets,
+                                                    reduction="none"))
 
         return _loss_fn
 
-    # Loss variance regularization ('vanilla' loss variance),
-    # using MSE_CRITERION
-    elif criterion_name == LVR_CRITERION:
-        loss_lambda = kwargs['lv_lambda']
-
-        def _loss_fn(outputs, targets):
-            elementwise_loss = (outputs.squeeze() - targets) ** 2
-            loss_variance = torch.var(elementwise_loss)
-            return torch.mean(elementwise_loss) + loss_lambda * loss_variance
-
-        return _loss_fn
     else:
         raise NotImplementedError
 
@@ -123,10 +110,10 @@ def get_optimizer(type, model, **opt_kwargs):
         raise NotImplementedError
 
 
-def subgroup_mse(preds, labels, g, group_label: int) -> torch.Tensor:
-    mse = mse_loss(preds, labels)
+def subgroup_loss(preds, labels, g, group_label: int) -> torch.Tensor:
+    loss = binary_cross_entropy(preds, labels)
     subgroup_mask = (g == group_label).double()
-    return torch.sum(mse * subgroup_mask)
+    return torch.sum(loss * subgroup_mask)
 
 
 def compute_disparity_metrics(preds, labels, sens, prefix=""):
@@ -136,16 +123,15 @@ def compute_disparity_metrics(preds, labels, sens, prefix=""):
         labels = np_to_torch_float(labels)
     metrics = {}
     for g in (0, 1):
-        mse_g = subgroup_mse(preds, labels, sens, group_label=g)
-        metrics[f"mse_{g}"] = mse_g
-        metrics[f"rmse_{g}"] = math.sqrt(mse_g)
-    for metric in ("mse", "rmse"):
-        metrics[f"{metric}_disparity"] = \
-            metrics[f"{metric}_1"] - metrics[f"{metric}_0"]
-        metrics[f"{metric}_abs_disparity"] = \
-            abs(metrics[f"{metric}_1"] - metrics[f"{metric}_0"])
-        metrics[f"{metric}_worstgroup"] = \
-            max(metrics[f"{metric}_1"], metrics[f"{metric}_0"])
+        loss_g = subgroup_loss(preds, labels, sens, group_label=g)
+        metrics[f"loss_{g}"] = loss_g
+
+    metrics["loss_disparity"] = \
+        metrics["loss_1"] - metrics[f"loss_0"]
+    metrics["loss_abs_disparity"] = \
+        abs(metrics["loss_1"] - metrics["loss_0"])
+    metrics["loss_worstgroup"] = \
+        max(metrics["loss_1"], metrics["loss_0"])
     return metrics
 
 
@@ -153,7 +139,7 @@ class PytorchRegressor(nn.Module):
     "A scikit-learn style interface for a linear pytorch model."
 
     def __init__(self, d_in: int,
-                 criterion_kwargs={"criterion_name": MSE_CRITERION},
+                 criterion_kwargs={"criterion_name": DEFAULT_CRITERION},
                  model_type: str = "default"):
         super(PytorchRegressor, self).__init__()
         criterion_name = criterion_kwargs.pop("criterion_name")
@@ -163,7 +149,7 @@ class PytorchRegressor(nn.Module):
         self.model_type = model_type  # used for logging
 
     def forward(self, x):
-        x = self.fc1(x)
+        x = F.sigmoid(self.fc1(x))
         x = torch.squeeze(x)  # [batch_size,1] --> batch_size,]
         return x
 
@@ -186,7 +172,7 @@ class PytorchRegressor(nn.Module):
             batch_size=64,
             cutoff_step=1e4,
             cutoff_value=2e5,
-            cutoff_metric="val_rmse",
+            cutoff_metric=None,
             sample_weight=None):
         """
 
@@ -245,19 +231,18 @@ class PytorchRegressor(nn.Module):
                 # Compute validation metrics
                 with torch.no_grad():
                     outputs_val = self.forward(X_val)
-                    train_mse = mse_loss(outputs, labels, reduction="mean")
+                    train_ce = binary_cross_entropy(outputs, labels,
+                                                    reduction="mean")
                     val_loss = criterion(outputs_val, y_val)
-                    val_mse = mse_loss(outputs_val, y_val,
-                                       reduction="mean")
+                    val_ce = binary_cross_entropy(outputs_val, y_val,
+                                                  reduction="mean")
                     disparity_val_metrics = compute_disparity_metrics(
                         outputs_val, y_val, g_val, "val")
                 log_metrics = {
                     "train_loss": loss.item(),
-                    "train_mse": train_mse.item(),
-                    "train_rmse": math.sqrt(train_mse.item()),
+                    "train_ce": train_ce.item(),
                     "val_loss": val_loss.item(),
-                    "val_mse": val_mse.item(),
-                    "val_rmse": math.sqrt(val_mse.item()),
+                    "val_ce": val_ce.item(),
                     "step_time": time.time() - cur,
                     **disparity_val_metrics,
                 }
