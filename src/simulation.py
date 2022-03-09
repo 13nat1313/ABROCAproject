@@ -21,10 +21,10 @@ class SimulationParams:
         mu_change (float): Value used to change means of covariates of subgroup 1 in relation to classification boundary
         orthog_to_boundary (bool): If True, any change to 'mu_1' will occur othogonally to classification boundary. If False, change will occur parallel to boundary.
     """
-    def __init__(self, d: int = 2, n: int = 10000, p_0: float = 0.5, eta_sd: np.ndarray[float] = np.full(2, 0.1),
-                 eta_mean: np.ndarray[float] = np.zeros(2), mu_0: np.ndarray[float] = None, mu_1: np.ndarray[float] = None,
-                 sigma_0: np.ndarray[float] = None, sigma_1: np.ndarray[float] = None, theta_0: np.ndarray[float] = None,
-                 theta_1: np.ndarray[float] = None, sigma_scale_factor: float = 1, mu_change: float = 0,
+    def __init__(self, d: int = 2, n: int = 10000, p_0: float = 0.5, eta_sd: np.ndarray = np.full(2, 0.1),
+                 eta_mean: np.ndarray = np.zeros(2), mu_0: np.ndarray = None, mu_1: np.ndarray = None,
+                 sigma_0: np.ndarray = None, sigma_1: np.ndarray = None, theta_0: np.ndarray = None,
+                 theta_1: np.ndarray = None, sigma_scale_factor: float = 1, mu_change: float = 0,
                  orthog_to_boundary: bool = False):
         """Initializes SimulationParams with given parameters.
 
