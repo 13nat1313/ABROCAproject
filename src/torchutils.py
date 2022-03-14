@@ -155,15 +155,13 @@ class PytorchRegressor(nn.Module):
 
     def __init__(self, d_in: int,
                  criterion_kwargs={"criterion_name": DEFAULT_CRITERION},
-                 model_type: str = "default",
-                 recode_labels_fn: Optional[Callable] = None):
+                 model_type: str = "default"):
         super(PytorchRegressor, self).__init__()
         criterion_name = criterion_kwargs.pop("criterion_name")
         self.criterion_name = criterion_name
         self.criterion_kwargs = criterion_kwargs
         self.fc1 = nn.Linear(d_in, 1)
         self.model_type = model_type  # used for logging
-        self.recode_labels_fn = recode_labels_fn
 
     def forward(self, x):
         x = F.sigmoid(self.fc1(x))
@@ -230,10 +228,6 @@ class PytorchRegressor(nn.Module):
         :param sample_weight:
         :return: None.
         """
-
-        if self.recode_labels_fn is not None:
-            y_tr = self.recode_labels_fn(y_tr)
-            y_val = self.recode_labels_fn(y_val)
 
         X_val = np_to_torch_float(X_val)
         y_val = np_to_torch_float(y_val)

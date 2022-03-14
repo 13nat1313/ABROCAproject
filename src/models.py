@@ -27,14 +27,6 @@ VALID_MODELS = [LR_MODEL, RWC_MODEL, EO_REDUCTION, L2LR_MODEL, FAST_DRO_MODEL,
                 IMPORANCE_WEIGHTING_MODEL]
 
 
-def recode_labels_plusminus(labels: np.ndarray):
-    """Takes a set of binary {0,1} labels and recodes them to {-1,1}."""
-    assert isinstance(labels, np.ndarray), f"expected numpy; got {type(labels)}"
-    neg_idxs = (labels == 0)
-    labels[neg_idxs] = -1
-    return labels
-
-
 def get_model(model_type: str, use_balanced: bool = False, d_in: int = None,
               criterion_kwargs=None):
     """Fetch the specified model."""
@@ -63,8 +55,7 @@ def get_model(model_type: str, use_balanced: bool = False, d_in: int = None,
         return torchutils.PytorchRegressor(
             d_in=d_in,
             criterion_kwargs=criterion_kwargs,
-            model_type=FAST_DRO_MODEL,
-            recode_labels_fn=recode_labels_plusminus)
+            model_type=FAST_DRO_MODEL)
     else:
         raise ValueError(f"unsupported model type: {model_type}")
 
