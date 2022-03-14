@@ -1,7 +1,7 @@
 import logging
 import math
 import time
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 import numpy as np
@@ -59,6 +59,7 @@ def arys_to_loader(X: pd.DataFrame, y: pd.DataFrame, g, batch_size: int,
 # criterion names
 DEFAULT_CRITERION = "ce"
 FASTDRO_CRITERION = "fastdro"
+IMPORTANCE_WEIGHTING_CRITERION = "iw_ce"
 
 # optimizer names
 SGD_OPT = "sgd"
@@ -81,8 +82,22 @@ def get_criterion(criterion_name: str, **kwargs) -> Callable:
     if criterion_name == DEFAULT_CRITERION:
         return torch.nn.CrossEntropyLoss()
 
-    # Fast DRO, using MSE_CRITERION
+    elif criterion_name == IMPORTANCE_WEIGHTING_CRITERION:
+
+        def _loss_fn(outputs, targets):
+            importance_weights = torch.exp(outputs)
+            bce = binary_cross_entropy(outputs, targets, reduction="none")
+            assert importance_weights.shape == bce.shape, \
+                "sanity check that weights and loss have " \
+                "shape [batch_size,]"
+            elementwise_weighted_loss = importance_weights * bce
+            return torch.mean(elementwise_weighted_loss)
+
+        return _loss_fn
+
+    # Fast DRO
     elif criterion_name == FASTDRO_CRITERION:
+
         robust_loss = RobustLoss(
             geometry=kwargs.get('geometry', 'chi-square'),
             size=float(kwargs.get('size', 1.0)),
@@ -140,13 +155,15 @@ class PytorchRegressor(nn.Module):
 
     def __init__(self, d_in: int,
                  criterion_kwargs={"criterion_name": DEFAULT_CRITERION},
-                 model_type: str = "default"):
+                 model_type: str = "default",
+                 recode_labels_fn: Optional[Callable] = None):
         super(PytorchRegressor, self).__init__()
         criterion_name = criterion_kwargs.pop("criterion_name")
         self.criterion_name = criterion_name
         self.criterion_kwargs = criterion_kwargs
         self.fc1 = nn.Linear(d_in, 1)
         self.model_type = model_type  # used for logging
+        self.recode_labels_fn = recode_labels_fn
 
     def forward(self, x):
         x = F.sigmoid(self.fc1(x))
@@ -161,7 +178,7 @@ class PytorchRegressor(nn.Module):
         label for element i, as integer.
         """
         y_hat_probs = self.predict_proba(x)
-        x = (y_hat_probs[:,1] >= 0.5).astype(int)
+        x = (y_hat_probs[:, 1] >= 0.5).astype(int)
         return x
 
     def predict_proba(self, x) -> np.ndarray:
@@ -213,6 +230,11 @@ class PytorchRegressor(nn.Module):
         :param sample_weight:
         :return: None.
         """
+
+        if self.recode_labels_fn is not None:
+            y_tr = self.recode_labels_fn(y_tr)
+            y_val = self.recode_labels_fn(y_val)
+
         X_val = np_to_torch_float(X_val)
         y_val = np_to_torch_float(y_val)
         g_val = np_to_torch_float(g_val)

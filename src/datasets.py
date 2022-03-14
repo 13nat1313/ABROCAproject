@@ -131,7 +131,6 @@ def get_adult_dataset(states=("CA",), year=2018):
         'NWLK',
         # Looking for work (Unedited-See "Employment Status Recode" (ESR))
         'OCCP',  # Occupation recode
-        # TODO(jpgard): consider replacing 'POBP' w/coarse mapping with 'WAOB' feature (world area of birth).
         'POBP',  # Place of birth
         'RELP',  # Relationship
         'SCHL',  # Educational attainment

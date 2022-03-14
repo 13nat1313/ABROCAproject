@@ -1,3 +1,4 @@
+import numpy as np
 import sklearn
 from fairlearn.reductions import EqualizedOdds, ExponentiatedGradient
 from sklearn_extra.robust import RobustWeightedClassifier
@@ -15,11 +16,23 @@ RWC_MODEL = "RWC"
 # "Fast-DRO" model with chi-square constraint
 FAST_DRO_MODEL = "DRO"
 
+# Importance weighting
+IMPORANCE_WEIGHTING_MODEL = "IW"
+
 # Reductions-based equalized odds-constrained model via fairlearn
 EO_REDUCTION = "EO_REDUCTION"
 
 # Postprocessing-based equalized odds model via aif360
-VALID_MODELS = [LR_MODEL, RWC_MODEL, EO_REDUCTION, L2LR_MODEL, FAST_DRO_MODEL]
+VALID_MODELS = [LR_MODEL, RWC_MODEL, EO_REDUCTION, L2LR_MODEL, FAST_DRO_MODEL,
+                IMPORANCE_WEIGHTING_MODEL]
+
+
+def recode_labels_plusminus(labels: np.ndarray):
+    """Takes a set of binary {0,1} labels and recodes them to {-1,1}."""
+    assert isinstance(labels, np.ndarray), f"expected numpy; got {type(labels)}"
+    neg_idxs = (labels == 0)
+    labels[neg_idxs] = -1
+    return labels
 
 
 def get_model(model_type: str, use_balanced: bool = False, d_in: int = None,
@@ -46,6 +59,12 @@ def get_model(model_type: str, use_balanced: bool = False, d_in: int = None,
             d_in=d_in,
             criterion_kwargs=criterion_kwargs,
             model_type=FAST_DRO_MODEL)
+    elif model_type == IMPORANCE_WEIGHTING_MODEL:
+        return torchutils.PytorchRegressor(
+            d_in=d_in,
+            criterion_kwargs=criterion_kwargs,
+            model_type=FAST_DRO_MODEL,
+            recode_labels_fn=recode_labels_plusminus)
     else:
         raise ValueError(f"unsupported model type: {model_type}")
 

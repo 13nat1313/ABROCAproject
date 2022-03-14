@@ -8,6 +8,9 @@ python scripts/train.py --model_type="L2LR" --dataset_name="adult"
 python scripts/train.py --model_type="LR" --dataset_name="affect"
 
 python scripts/train.py --model_type="DRO" --dataset_name="affect"
+
+python scripts/train.py --model_type="IW" --dataset_name="affect"
+
 """
 import argparse
 import pprint
@@ -20,7 +23,7 @@ import sklearn.linear_model
 import wandb
 
 from src.datasets import ADULT_DATASET, VALID_DATASETS, get_dataset
-from src.models import get_model, LR_MODEL, VALID_MODELS
+from src.models import get_model, LR_MODEL, IMPORANCE_WEIGHTING_MODEL, VALID_MODELS
 from src.abroca import abroca_from_predictions
 from src import datasets, torchutils
 from src.config import DEFAULT_CONFIGS, CONFIG_FNS
@@ -53,7 +56,7 @@ def fit(model, X: np.ndarray, y: np.ndarray, g: np.ndarray = None,
     return model
 
 
-def main(model_type: str = LR_MODEL, dataset_name: str = ADULT_DATASET,
+def main(model_type: str, dataset_name: str = ADULT_DATASET,
          use_balanced: bool = False,
          scale=True, make_dummies=True):
     default_config = DEFAULT_CONFIGS[model_type]
