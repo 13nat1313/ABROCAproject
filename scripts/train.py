@@ -108,7 +108,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_type", default=None, type=str,
                         choices=VALID_MODELS)
-    parser.add_argument("--dataset_name", default=ADULT_DATASET, type=str,
+    parser.add_argument("--dataset_name", default=None, type=str,
                         choices=VALID_DATASETS)
     parser.add_argument(
         "--use_balanced", default=False, action="store_true",
