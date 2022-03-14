@@ -7,7 +7,7 @@ DEFAULT_CONFIGS = {
     FAST_DRO_MODEL: {
         'model_type': FAST_DRO_MODEL,
         # training parameters
-        'steps': 100000,
+        'steps': 1000,
         'batch_size': 64,
         # uncertainty set parameters
         'geometry': 'chi-square',

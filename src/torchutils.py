@@ -153,10 +153,29 @@ class PytorchRegressor(nn.Module):
         x = torch.squeeze(x)  # [batch_size,1] --> batch_size,]
         return x
 
-    def predict(self, x):
-        if isinstance(x, pd.DataFrame) or isinstance(x, pd.Series):
+    def predict(self, x) -> np.ndarray:
+        """Provide a scikit-learn style .predict() interface.
+
+        Gives hard class predictions for a batch of inputs x. Returns an
+        np.ndarray of shape [batch_size,] where the ith element is the predicted
+        label for element i, as integer.
+        """
+        y_hat_probs = self.predict_proba(x)
+        x = (y_hat_probs[:,1] >= 0.5).astype(int)
+        return x
+
+    def predict_proba(self, x) -> np.ndarray:
+        """Provide a scikit-learn style .predict() interface.
+
+        Gives predicted probabilities for a batch of inputs x. Returns an
+        np.ndarray of shape [batch_size, 2] where the ith column is the
+        predicted probability that the input is of class i.
+        """
+        if isinstance(x, np.ndarray):
             x = np_to_torch_float(x)
-        return self.forward(x)
+        x = self.forward(x).detach().numpy()
+        x = np.column_stack((1 - x, x))
+        return x
 
     def print_summary(self, global_step: int, metrics):
         # Print a summary every n steps
