@@ -6,6 +6,7 @@ from typing import Callable, Optional
 import torch
 import numpy as np
 import pandas as pd
+import scipy.optimize as sopt
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.functional import binary_cross_entropy
@@ -59,6 +60,7 @@ def arys_to_loader(X: pd.DataFrame, y: pd.DataFrame, g, batch_size: int,
 # criterion names
 DEFAULT_CRITERION = "ce"
 FASTDRO_CRITERION = "fastdro"
+DORO_CRITERION = "doro"
 IMPORTANCE_WEIGHTING_CRITERION = "iw_ce"
 
 # optimizer names
@@ -94,6 +96,29 @@ def get_criterion(criterion_name: str, **kwargs) -> Callable:
             return torch.mean(elementwise_weighted_loss)
 
         return _loss_fn
+
+    elif (criterion_name == DORO_CRITERION) and (
+            kwargs["geometry"] == "chi-square"):
+        # DORO; adapted from
+        # https://github.com/RuntianZ/doro/blob/master/wilds-exp/algorithms/doro.py
+        def _loss_fn(outputs, targets):
+            batch_size = len(targets)
+            loss = binary_cross_entropy(outputs, targets, reduction="none")
+            # Chi^2-DORO
+            max_l = 10.
+            C = math.sqrt(1 + (1 / kwargs["alpha"] - 1) ** 2)
+            n = int(kwargs["eps"] * batch_size)
+            rk = torch.argsort(loss, descending=True)
+            l0 = loss[rk[n:]]
+            foo = lambda eta: C * math.sqrt(
+                (F.relu(l0 - eta) ** 2).mean().item()) + eta
+            opt_eta = sopt.brent(foo, brack=(0, max_l))
+            loss = C * torch.sqrt((F.relu(l0 - opt_eta) ** 2).mean()) + opt_eta
+            return loss
+
+        return _loss_fn
+
+
 
     # Fast DRO
     elif criterion_name == FASTDRO_CRITERION:
