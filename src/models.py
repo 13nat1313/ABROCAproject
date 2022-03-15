@@ -19,6 +19,9 @@ FAST_DRO_MODEL = "DRO"
 # DORO model
 DORO_MODEL = "DORO"
 
+# Group DRO
+GROUP_DRO_MODEL = "GROUPDRO"
+
 # Importance weighting
 IMPORANCE_WEIGHTING_MODEL = "IW"
 
@@ -27,7 +30,7 @@ EO_REDUCTION = "EO_REDUCTION"
 
 # Postprocessing-based equalized odds model via aif360
 VALID_MODELS = [LR_MODEL, RWC_MODEL, EO_REDUCTION, L2LR_MODEL, FAST_DRO_MODEL,
-                IMPORANCE_WEIGHTING_MODEL, DORO_MODEL]
+                IMPORANCE_WEIGHTING_MODEL, DORO_MODEL, GROUP_DRO_MODEL]
 
 
 def get_model(model_type: str, use_balanced: bool = False, d_in: int = None,
@@ -54,6 +57,16 @@ def get_model(model_type: str, use_balanced: bool = False, d_in: int = None,
 
     elif model_type in (FAST_DRO_MODEL, DORO_MODEL):
         return torchutils.PytorchRegressor(
+            d_in=d_in,
+            criterion_kwargs=criterion_kwargs,
+            model_type=model_type)
+
+    elif model_type == GROUP_DRO_MODEL:
+        # Pull group_dro_step_size out of config dict, since it is the only
+        # element not passed to the super class constructor.
+        group_weights_step_size = criterion_kwargs.pop("group_weights_step_size")
+        return torchutils.GroupDRORegressor(
+            group_weights_step_size=group_weights_step_size,
             d_in=d_in,
             criterion_kwargs=criterion_kwargs,
             model_type=model_type)

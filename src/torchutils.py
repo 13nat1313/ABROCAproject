@@ -61,6 +61,7 @@ def arys_to_loader(X: pd.DataFrame, y: pd.DataFrame, g, batch_size: int,
 DEFAULT_CRITERION = "ce"
 FASTDRO_CRITERION = "fastdro"
 DORO_CRITERION = "doro"
+GROUP_DRO_CRITERION = "groupdro"
 IMPORTANCE_WEIGHTING_CRITERION = "iw_ce"
 
 # optimizer names
@@ -76,6 +77,12 @@ def get_optimizer(type, model, **opt_kwargs):
         return torch.optim.Adam(model.parameters(), **opt_kwargs)
     else:
         raise NotImplementedError
+
+
+def subgroup_loss(preds, labels, g, group_label: int) -> torch.Tensor:
+    loss = binary_cross_entropy(preds, labels)
+    subgroup_mask = (g == group_label).double()
+    return torch.sum(loss * subgroup_mask) / torch.sum(subgroup_mask)
 
 
 def get_criterion(criterion_name: str, **kwargs) -> Callable:
@@ -118,7 +125,15 @@ def get_criterion(criterion_name: str, **kwargs) -> Callable:
 
         return _loss_fn
 
+    elif criterion_name == GROUP_DRO_CRITERION:
+        def _loss_fn(outputs, targets, sens):
+            assert sorted(sens.unique().tolist()) == [0., 1.], \
+                "only binary groups supported."
+            loss_group_0 = subgroup_loss(outputs, targets, sens, 0)
+            loss_group_1 = subgroup_loss(outputs, targets, sens, 1)
+            return torch.stack([loss_group_0, loss_group_1])
 
+        return _loss_fn
 
     # Fast DRO
     elif criterion_name == FASTDRO_CRITERION:
@@ -148,12 +163,6 @@ def get_optimizer(type, model, **opt_kwargs):
         return torch.optim.Adam(model.parameters(), **opt_kwargs)
     else:
         raise NotImplementedError
-
-
-def subgroup_loss(preds, labels, g, group_label: int) -> torch.Tensor:
-    loss = binary_cross_entropy(preds, labels)
-    subgroup_mask = (g == group_label).double()
-    return torch.sum(loss * subgroup_mask) / torch.sum(subgroup_mask)
 
 
 def compute_disparity_metrics(preds, labels, sens, prefix=""):
@@ -226,6 +235,27 @@ class PytorchRegressor(nn.Module):
                 "metrics for model {} at step {}: {}".format(
                     self.model_type, global_step, metrics_str))
 
+    def compute_log_metrics(self, X_val, y_val, g_val, criterion) -> dict:
+        with torch.no_grad():
+            outputs_val = self.forward(X_val)
+            val_loss = criterion(outputs_val, y_val)
+            val_ce = binary_cross_entropy(outputs_val, y_val,
+                                          reduction="mean")
+            disparity_val_metrics = compute_disparity_metrics(
+                outputs_val, y_val, g_val, "val")
+        return {"val_loss": val_loss.item(),
+                "val_ce": val_ce.item(),
+                **disparity_val_metrics, }
+
+    def _update(self, optimizer, X, y, g, criterion):
+        """Execute a single parameter update step."""
+        optimizer.zero_grad(set_to_none=True)
+        outputs = self.forward(X)
+        loss = criterion(outputs, y)
+        loss.backward()
+        optimizer.step()
+        return loss, outputs
+
     def fit(self, X_tr, y_tr, g_tr, X_val, y_val, g_val, optimizer, steps: int,
             scheduler=None,
             batch_size=64,
@@ -282,30 +312,19 @@ class PytorchRegressor(nn.Module):
                     continue
 
                 # Model update step
-                optimizer.zero_grad(set_to_none=True)
-                outputs = self.forward(data)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
+                loss, outputs = self._update(optimizer, data, labels, sens,
+                                             criterion)
 
                 # Compute validation metrics
-                with torch.no_grad():
-                    outputs_val = self.forward(X_val)
-                    train_ce = binary_cross_entropy(outputs, labels,
-                                                    reduction="mean")
-                    val_loss = criterion(outputs_val, y_val)
-                    val_ce = binary_cross_entropy(outputs_val, y_val,
-                                                  reduction="mean")
-                    disparity_val_metrics = compute_disparity_metrics(
-                        outputs_val, y_val, g_val, "val")
-                log_metrics = {
+                log_metrics = self.compute_log_metrics(X_val, y_val, g_val,
+                                                       criterion)
+                log_metrics.update({
+                    "train_ce": binary_cross_entropy(outputs, labels,
+                                                     reduction="mean").item(),
                     "train_loss": loss.item(),
-                    "train_ce": train_ce.item(),
-                    "val_loss": val_loss.item(),
-                    "val_ce": val_ce.item(),
                     "step_time": time.time() - cur,
-                    **disparity_val_metrics,
-                }
+                })
+
                 if scheduler is not None:
                     log_metrics["learning_rate"] = scheduler.get_last_lr()[-1]
                     # Schedule happens on per-step, not per-epoch, basis.
@@ -341,3 +360,40 @@ class PytorchRegressor(nn.Module):
 
                 global_step += 1
             epoch += 1
+
+
+class GroupDRORegressor(PytorchRegressor):
+    def __init__(self, group_weights_step_size, n_groups=2, **kwargs):
+        self.group_weights_step_size = group_weights_step_size
+        # initialize adversarial weights
+        self.group_weights = torch.ones(n_groups)
+        self.group_weights = self.group_weights / self.group_weights.sum()
+        super().__init__(**kwargs)
+
+    def compute_log_metrics(self, X_val, y_val, g_val, criterion) -> dict:
+        with torch.no_grad():
+            outputs_val = self.forward(X_val)
+            group_losses = criterion(outputs_val, y_val, g_val)
+            val_loss = group_losses @ self.group_weights
+            val_ce = binary_cross_entropy(outputs_val, y_val, reduction="mean")
+            disparity_val_metrics = compute_disparity_metrics(
+                outputs_val, y_val, g_val, "val")
+        # TODO(jpgard): log the group weights
+        return {"val_loss": val_loss.item(),
+                "val_ce": val_ce.item(),
+                **disparity_val_metrics, }
+
+    def _update(self, optimizer, X, y, g, criterion):
+        """Execute a single parameter update step."""
+        optimizer.zero_grad(set_to_none=True)
+        outputs = self.forward(X)
+        group_losses = criterion(outputs, y, g)
+        # update group weights
+        self.group_weights = self.group_weights * torch.exp(
+            self.group_weights_step_size * group_losses.data)
+        self.group_weights = (self.group_weights / (self.group_weights.sum()))
+        # update model
+        loss = group_losses @ self.group_weights
+        loss.backward()
+        optimizer.step()
+        return loss, outputs
