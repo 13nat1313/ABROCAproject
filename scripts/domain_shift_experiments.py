@@ -88,8 +88,7 @@ def main(dataset_name: str = ADULT_DATASET,
     domain_split_feature = SPLIT_COLS_BY_DATASET[dataset_name]
     metrics_list = []
 
-    for test_domain_val in sorted(df[domain_split_feature].unique().tolist())[
-                           :2]:
+    for test_domain_val in sorted(df[domain_split_feature].unique().tolist()):
         metrics = run_domain_shift_experiment(df, models_to_train,
                                               domain_split_feature,
                                               test_domain_val,
