@@ -259,7 +259,7 @@ class PytorchRegressor(nn.Module):
     def fit(self, X_tr, y_tr, g_tr, X_val, y_val, g_val, optimizer, steps: int,
             scheduler=None,
             batch_size=64,
-            cutoff_step=1e4,
+            cutoff_step=1e3,
             cutoff_value=5.,
             cutoff_metric="val_loss",
             sample_weight=None):
