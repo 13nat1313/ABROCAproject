@@ -1349,6 +1349,7 @@ DEFAULT_ACS_FEATURE_MAPPINGS = {
     'RELP': _float_to_string_mapping(0, 17),
     # Educational attainment
     'SCHL': _float_to_string_mapping(1, 24),
+    'ST': _float_to_string_mapping(1, 72),
     # Worked last week
     'WRK': _float_to_string_mapping(0, 2)
 }

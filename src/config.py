@@ -7,8 +7,8 @@ DEFAULT_CONFIGS = {
     FAST_DRO_MODEL: {
         'model_type': FAST_DRO_MODEL,
         # training parameters
-        'steps': 1000,
-        'batch_size': 64,
+        'steps': 13000,  # 1 epoch on largest (adult) train set w batch_size=128
+        'batch_size': 128,
         # uncertainty set parameters
         'geometry': 'chi-square',
         'size': 0.,
@@ -24,8 +24,8 @@ DEFAULT_CONFIGS = {
     DORO_MODEL: {
         'model_type': DORO_MODEL,
         # training parameters
-        'steps': 1000,
-        'batch_size': 64,
+        'steps': 13000,  # 1 epoch on largest (adult) train set w batch_size=128
+        'batch_size': 128,
         # DORO criterion parameters
         'geometry': 'chi-square',
         'alpha': 0.5,  # see appendix B.3 of DORO paper
@@ -40,8 +40,8 @@ DEFAULT_CONFIGS = {
     GROUP_DRO_MODEL: {
         'model_type': GROUP_DRO_MODEL,
         # training parameters
-        'steps': 1000,
-        'batch_size': 64,
+        'steps': 13000,  # 1 epoch on largest (adult) train set w batch_size=128
+        'batch_size': 128,
         # criterion parameters
         'criterion_name': torchutils.GROUP_DRO_CRITERION,
         'group_weights_step_size': 0.1,
@@ -54,8 +54,8 @@ DEFAULT_CONFIGS = {
     IMPORANCE_WEIGHTING_MODEL: {
         'model_type': IMPORANCE_WEIGHTING_MODEL,
         # training parameters
-        'steps': 1000,
-        'batch_size': 64,
+        'steps': 13000,  # 1 epoch on largest (adult) train set w batch_size=128
+        'batch_size': 128,
         # optimization parameters
         'optimizer': torchutils.SGD_OPT,
         'criterion_name': torchutils.IMPORTANCE_WEIGHTING_CRITERION,
@@ -63,8 +63,18 @@ DEFAULT_CONFIGS = {
         'weight_decay': 0.0001,
         'learning_rate': 0.01,
     },
-    LR_MODEL: {},
-    L2LR_MODEL: {},
+    LR_MODEL: {
+        'model_type': LR_MODEL,
+    },
+    LR_MODEL_BALANCED: {
+        'model_type': LR_MODEL_BALANCED
+    },
+    L2LR_MODEL: {
+        'model_type': L2LR_MODEL,
+    },
+    L2LR_MODEL_BALANCED: {
+        'model_type': L2LR_MODEL_BALANCED,
+    }
 }
 
 
@@ -128,5 +138,7 @@ CONFIG_FNS = {
     GROUP_DRO_MODEL: unpack_config_group_dro,
     IMPORANCE_WEIGHTING_MODEL: unpack_config_importance_weighting,
     LR_MODEL: null_config,
+    LR_MODEL_BALANCED: null_config,
     L2LR_MODEL: null_config,
+    L2LR_MODEL_BALANCED: null_config,
 }

@@ -4,6 +4,7 @@ import folktables
 import sklearn
 from folktables.acs import adult_filter
 import numpy as np
+import os
 import pandas as pd
 from sklearn import preprocessing
 
@@ -33,10 +34,14 @@ def scale_data(df_tr, df_te, TGT="target", SENS="sensitive"):
     unscaled_columns = set(df_tr.columns) - set(columns_to_scale)
     df_tr_scaled = pd.DataFrame(scaler.fit_transform(df_tr[columns_to_scale]),
                                 columns=columns_to_scale)
-    df_tr_out = pd.concat((df_tr_scaled, df_tr[unscaled_columns]), axis=1)
+    df_tr_out = pd.concat((df_tr_scaled.reset_index(),
+                           df_tr[unscaled_columns].reset_index()),
+                          axis=1)
     df_te_scaled = pd.DataFrame(scaler.transform(df_te[columns_to_scale]),
                                 columns=columns_to_scale)
-    df_te_out = pd.concat((df_te_scaled, df_te[unscaled_columns]), axis=1)
+    df_te_out = pd.concat((df_te_scaled.reset_index(),
+                           df_te[unscaled_columns].reset_index()),
+                          axis=1)
 
     # Check that no null values were introduced
     assert_no_nan(df_tr_out, "null values introduced during scaling")
@@ -107,8 +112,18 @@ def get_acs_data_source(year: int):
                                     survey='person')
 
 
-def get_adult_dataset(states=("CA",), year=2018):
+def _adult_dataset_cache_filename(states, year):
+    states_str = ''.join(sorted(states))
+    filename = f"adult-states{states_str}-year{year}.csv"
+    return os.path.join('datasets', filename)
+
+
+def get_adult_dataset(states=folktables.state_list, year=2018, use_cache=True):
     """Fetch the Adult dataset."""
+    cache_filename = _adult_dataset_cache_filename(states, year)
+    if os.path.exists(cache_filename) and use_cache:
+        df = pd.read_csv(cache_filename)
+        return df
     data_source = get_acs_data_source(year)
     acs_data = data_source.get_data(states=states, download=True)
     feature_names = [
@@ -153,6 +168,7 @@ def get_adult_dataset(states=("CA",), year=2018):
     features, label, group = problem.df_to_numpy(acs_data)
 
     df = acs_data_to_df(features, label, group, feature_names)
+    df.to_csv(cache_filename, index=False)
     return df
 
 
@@ -205,8 +221,8 @@ def get_affect_dataset(dataset_root="./datasets", label_colname="confusion",
         1=urban;2=rural;3=suburban.
     """
     assert label_colname in (
-    "confusion", "concentration", "boredom", "frustration", "on_task",
-    "off_task")
+        "confusion", "concentration", "boredom", "frustration", "on_task",
+        "off_task")
     fp = os.path.join(dataset_root,
                       "affect_features_and_labels_folded_all_timesteps.csv")
     usecols = affect_feature_columns + [label_colname, "urbanicity"]
@@ -214,7 +230,8 @@ def get_affect_dataset(dataset_root="./datasets", label_colname="confusion",
     df.rename(columns={"urbanicity": "sensitive", label_colname: "target"},
               inplace=True)
     df.dropna(inplace=True)
-    df.sensitive = df.sensitive.apply(lambda x: x == sens_pos_class).astype(float)
+    df.sensitive = df.sensitive.apply(lambda x: x == sens_pos_class).astype(
+        float)
     return df
 
 
@@ -231,6 +248,17 @@ def x_y_g_split(df) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     g = df.pop('sensitive').values
     X = df.values
     return X, y, g
+
+
+def domain_split(df, split_col, test_values) -> Tuple[
+    pd.DataFrame, pd.DataFrame]:
+    """Filter split_col using test_values, and drop split_col from the result."""
+    test_idxs = df[split_col].isin(test_values)
+    train = df.loc[~test_idxs].drop(columns=[split_col])
+    test = df.loc[test_idxs].drop(columns=[split_col])
+    assert len(train), "empty train data; check filter criteria"
+    assert len(test), "empty test data; check filter criteria"
+    return train, test
 
 
 def train_test_split(df, test_size: float = 0.1

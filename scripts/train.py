@@ -28,7 +28,6 @@ from src.experiment_utils import fit, evaluate
 
 
 def main(model_type: str, dataset_name: str = ADULT_DATASET,
-         use_balanced: bool = False,
          scale=True, make_dummies=True):
     default_config = DEFAULT_CONFIGS[model_type]
 
@@ -56,7 +55,7 @@ def main(model_type: str, dataset_name: str = ADULT_DATASET,
     print(f"[INFO] test label distribution:")
     print(np.unique(y_te, return_counts=True))
 
-    model = get_model(model_type, use_balanced, d_in=X_tr.shape[1],
+    model = get_model(model_type, d_in=X_tr.shape[1],
                       criterion_kwargs=criterion_kwargs)
     if "optimizer" in config:
         opt = torchutils.get_optimizer(config["optimizer"],
@@ -78,9 +77,5 @@ if __name__ == "__main__":
                         choices=VALID_MODELS)
     parser.add_argument("--dataset_name", default=None, type=str,
                         choices=VALID_DATASETS)
-    parser.add_argument(
-        "--use_balanced", default=False, action="store_true",
-        help="If true, use class-balanced weights;"
-             " otherwise no weights applied.")
     args = parser.parse_args()
     main(**vars(args))
