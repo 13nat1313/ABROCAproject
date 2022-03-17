@@ -40,10 +40,14 @@ def scale_data(df_tr, df_te):
     unscaled_columns = set(df_tr.columns) - set(columns_to_scale)
     df_tr_scaled = pd.DataFrame(scaler.fit_transform(df_tr[columns_to_scale]),
                                 columns=columns_to_scale)
-    df_tr_out = pd.concat((df_tr_scaled, df_tr[unscaled_columns]), axis=1)
+    df_tr_out = pd.concat((df_tr_scaled.reset_index(),
+                           df_tr[unscaled_columns].reset_index()),
+                          axis=1)
     df_te_scaled = pd.DataFrame(scaler.transform(df_te[columns_to_scale]),
                                 columns=columns_to_scale)
-    df_te_out = pd.concat((df_te_scaled, df_te[unscaled_columns]), axis=1)
+    df_te_out = pd.concat((df_te_scaled.reset_index(),
+                           df_te[unscaled_columns].reset_index()),
+                          axis=1)
     return df_tr_out, df_te_out
 
 
