@@ -21,7 +21,7 @@ import numpy as np
 import wandb
 
 from src.datasets import ADULT_DATASET, VALID_DATASETS, get_dataset
-from src.models import get_model, VALID_MODELS, DORO_MODEL
+from src.models import *
 from src import datasets, torchutils
 from src.config import DEFAULT_CONFIGS, CONFIG_FNS
 from src.experiment_utils import fit, evaluate
@@ -41,10 +41,10 @@ def main(model_type: str = DORO_MODEL, dataset_name: str = ADULT_DATASET,
     start = time.time()
     df = get_dataset(dataset_name)
     tr, te = datasets.train_test_split(df)
-    if make_dummies:
-        tr, te = datasets.make_dummy_cols(df_tr=tr, df_te=te)
     if scale:
         tr, te = datasets.scale_data(df_tr=tr, df_te=te)
+    if make_dummies:
+        tr, te = datasets.make_dummy_cols(df_tr=tr, df_te=te)
     X_tr, y_tr, g_tr = datasets.x_y_g_split(tr)
     X_te, y_te, g_te = datasets.x_y_g_split(te)
 

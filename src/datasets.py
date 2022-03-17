@@ -21,31 +21,29 @@ def assert_no_nan(df, msg: str):
     return
 
 
-def scale_data(df_tr, df_te, TGT="target", SENS="sensitive"):
+def get_numeric_columns(df: pd.DataFrame):
+    columns = []
+    for c in df.columns:
+        if (c not in ['target', 'sensitive']) \
+                and df[c].dtype != 'object' \
+                and not hasattr(df[c], 'cat'):
+            columns.append(c)
+    return columns
+
+
+def scale_data(df_tr, df_te):
     """Scale numeric train/test data columns using the *train* data statistics.
     """
-    assert_no_nan(df_tr, "null values detected in training data; cannot scale")
-    assert_no_nan(df_te, "null values detected in test data; cannot scale")
 
     scaler = preprocessing.StandardScaler()
-    columns_to_scale = [c for c, dtype in df_tr.dtypes.items()
-                        if c not in (TGT, SENS)
-                        and dtype != 'object']
+    columns_to_scale = get_numeric_columns(df_tr)
     unscaled_columns = set(df_tr.columns) - set(columns_to_scale)
     df_tr_scaled = pd.DataFrame(scaler.fit_transform(df_tr[columns_to_scale]),
                                 columns=columns_to_scale)
-    df_tr_out = pd.concat((df_tr_scaled.reset_index(),
-                           df_tr[unscaled_columns].reset_index()),
-                          axis=1)
+    df_tr_out = pd.concat((df_tr_scaled, df_tr[unscaled_columns]), axis=1)
     df_te_scaled = pd.DataFrame(scaler.transform(df_te[columns_to_scale]),
                                 columns=columns_to_scale)
-    df_te_out = pd.concat((df_te_scaled.reset_index(),
-                           df_te[unscaled_columns].reset_index()),
-                          axis=1)
-
-    # Check that no null values were introduced
-    assert_no_nan(df_tr_out, "null values introduced during scaling")
-    assert_no_nan(df_te_out, "null values introduced during scaling")
+    df_te_out = pd.concat((df_te_scaled, df_te[unscaled_columns]), axis=1)
     return df_tr_out, df_te_out
 
 
@@ -74,6 +72,8 @@ def acs_numeric_to_categorical(df, feature_mapping=ACS_FEATURE_MAPPING):
     Note that this only maps a known set of features used in this work;
     there are likely many additional categorical features treated as numeric!!
     """
+    import ipdb;
+    ipdb.set_trace()
     for feature, mapping in feature_mapping.items():
         if feature in df.columns:
             assert pd.isnull(
