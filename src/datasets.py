@@ -157,7 +157,7 @@ def get_adult_dataset(states=folktables.state_list, year=2018, use_cache=True):
     problem = folktables.BasicProblem(
         features=feature_names,
         target='PINCP',
-        target_transform=lambda x: x > 50000,
+        target_transform=lambda x: x > 56000,
         group='RAC1P',
         # 'White alone' vs. all other categories (RAC1P) or
         # 'Male' vs. Female (SEX)
