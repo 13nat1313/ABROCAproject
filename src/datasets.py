@@ -122,6 +122,7 @@ def get_adult_dataset(states=folktables.state_list, year=2018, use_cache=True):
     """Fetch the Adult dataset."""
     cache_filename = _adult_dataset_cache_filename(states, year)
     if os.path.exists(cache_filename) and use_cache:
+        print(f"loading dataset from {cache_filename}")
         df = pd.read_csv(cache_filename)
         return df
     data_source = get_acs_data_source(year)

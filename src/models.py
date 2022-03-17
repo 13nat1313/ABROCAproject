@@ -5,30 +5,30 @@ from sklearn_extra.robust import RobustWeightedClassifier
 from src import torchutils
 
 # Vanilla logistic regression model
-LR_MODEL = "LR"
-LR_MODEL_BALANCED = "LR_BAL"
+LR_MODEL = "lr"
+LR_MODEL_BALANCED = "lr_bal"
 
 # L2-regularized logistic regression model
-L2LR_MODEL = "L2LR"
-L2LR_MODEL_BALANCED = "L2LR_BAL"
+L2LR_MODEL = "l2lr"
+L2LR_MODEL_BALANCED = "l2lr_bal"
 
 # RobustWeightedClassifier with Huber weighting
-RWC_MODEL = "RWC"
+RWC_MODEL = "rwc"
 
 # "Fast-DRO" model with chi-square constraint
-FAST_DRO_MODEL = "DRO"
+FAST_DRO_MODEL = "dro"
 
 # DORO model
-DORO_MODEL = "DORO"
+DORO_MODEL = "doro"
 
 # Group DRO
-GROUP_DRO_MODEL = "GROUPDRO"
+GROUP_DRO_MODEL = "groupdro"
 
 # Importance weighting
-IMPORANCE_WEIGHTING_MODEL = "IW"
+IMPORANCE_WEIGHTING_MODEL = "iw"
 
 # Reductions-based equalized odds-constrained model via fairlearn
-EO_REDUCTION = "EO_REDUCTION"
+EO_REDUCTION = "eo_reduction"
 
 # Postprocessing-based equalized odds model via aif360
 VALID_MODELS = [LR_MODEL, RWC_MODEL, EO_REDUCTION, L2LR_MODEL, FAST_DRO_MODEL,

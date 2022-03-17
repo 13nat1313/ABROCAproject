@@ -21,18 +21,17 @@ import numpy as np
 import wandb
 
 from src.datasets import ADULT_DATASET, VALID_DATASETS, get_dataset
-from src.models import get_model, VALID_MODELS
+from src.models import get_model, VALID_MODELS, DORO_MODEL
 from src import datasets, torchutils
 from src.config import DEFAULT_CONFIGS, CONFIG_FNS
 from src.experiment_utils import fit, evaluate
 
 
-def main(model_type: str, dataset_name: str = ADULT_DATASET,
+def main(model_type: str = DORO_MODEL, dataset_name: str = ADULT_DATASET,
          scale=True, make_dummies=True):
     default_config = DEFAULT_CONFIGS[model_type]
 
-    wandb.init(project="abroca", mode="disabled",
-               config=default_config)
+    wandb.init(project="abroca", config=default_config, mode="disabled")
     config = wandb.config
 
     # unpack config into criterion and fit kwargs
@@ -72,10 +71,4 @@ def main(model_type: str, dataset_name: str = ADULT_DATASET,
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model_type", default=None, type=str,
-                        choices=VALID_MODELS)
-    parser.add_argument("--dataset_name", default=None, type=str,
-                        choices=VALID_DATASETS)
-    args = parser.parse_args()
-    main(**vars(args))
+    main()
