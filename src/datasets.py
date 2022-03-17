@@ -40,14 +40,10 @@ def scale_data(df_tr, df_te):
     unscaled_columns = set(df_tr.columns) - set(columns_to_scale)
     df_tr_scaled = pd.DataFrame(scaler.fit_transform(df_tr[columns_to_scale]),
                                 columns=columns_to_scale)
-    df_tr_out = pd.concat((df_tr_scaled.reset_index(),
-                           df_tr[unscaled_columns].reset_index()),
-                          axis=1)
+    df_tr_out = pd.concat((df_tr_scaled, df_tr[unscaled_columns]), axis=1)
     df_te_scaled = pd.DataFrame(scaler.transform(df_te[columns_to_scale]),
                                 columns=columns_to_scale)
-    df_te_out = pd.concat((df_te_scaled.reset_index(),
-                           df_te[unscaled_columns].reset_index()),
-                          axis=1)
+    df_te_out = pd.concat((df_te_scaled, df_te[unscaled_columns]), axis=1)
     return df_tr_out, df_te_out
 
 
@@ -259,8 +255,8 @@ def domain_split(df, split_col, test_values) -> Tuple[
     pd.DataFrame, pd.DataFrame]:
     """Filter split_col using test_values, and drop split_col from the result."""
     test_idxs = df[split_col].isin(test_values)
-    train = df.loc[~test_idxs].drop(columns=[split_col])
-    test = df.loc[test_idxs].drop(columns=[split_col])
+    train = df.loc[~test_idxs].drop(columns=[split_col]).reset_index()
+    test = df.loc[test_idxs].drop(columns=[split_col]).reset_index()
     assert len(train), "empty train data; check filter criteria"
     assert len(test), "empty test data; check filter criteria"
     return train, test
