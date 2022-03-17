@@ -198,7 +198,7 @@ class PytorchRegressor(nn.Module):
         self.model_type = model_type  # used for logging
 
     def forward(self, x):
-        x = F.sigmoid(self.fc1(x))
+        x = torch.sigmoid(self.fc1(x))
         x = torch.squeeze(x)  # [batch_size,1] --> batch_size,]
         return x
 
