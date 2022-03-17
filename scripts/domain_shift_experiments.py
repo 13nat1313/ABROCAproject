@@ -95,7 +95,7 @@ def main(dataset_name: str = ADULT_DATASET,
                                               make_dummies=make_dummies,
                                               scale=scale)
         metrics_list.extend(metrics)
-    pd.DataFrame(metrics_list).to_csv("results.csv")
+    pd.DataFrame(metrics_list).to_csv(f"results_{dataset_name}.csv", index=False)
     print("completed in {}s".format(time.time() - start))
 
 
