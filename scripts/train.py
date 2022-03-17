@@ -31,7 +31,7 @@ def main(model_type: str = DORO_MODEL, dataset_name: str = ADULT_DATASET,
          scale=True, make_dummies=True):
     default_config = DEFAULT_CONFIGS[model_type]
 
-    wandb.init(project="abroca", config=default_config, mode="disabled")
+    wandb.init(project="abroca", config=default_config)
     config = wandb.config
 
     # unpack config into criterion and fit kwargs
