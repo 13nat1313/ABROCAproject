@@ -12,11 +12,8 @@ python scripts/train.py --model_type="DRO" --dataset_name="affect"
 python scripts/train.py --model_type="IW" --dataset_name="affect"
 
 """
-import argparse
 import pprint
 import time
-
-import numpy as np
 
 import wandb
 
