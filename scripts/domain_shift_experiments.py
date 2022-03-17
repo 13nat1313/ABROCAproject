@@ -50,10 +50,10 @@ def run_domain_shift_experiment(df: pd.DataFrame,
         f"[INFO] splitting on column {domain_split_feature} == {test_domain_val}")
     tr, te = datasets.domain_split(df, split_col=domain_split_feature,
                                    test_values=[test_domain_val, ])
-    if make_dummies:
-        tr, te = datasets.make_dummy_cols(df_tr=tr, df_te=te)
     if scale:
         tr, te = datasets.scale_data(df_tr=tr, df_te=te)
+    if make_dummies:
+        tr, te = datasets.make_dummy_cols(df_tr=tr, df_te=te)
     X_tr, y_tr, g_tr = datasets.x_y_g_split(tr)
     X_te, y_te, g_te = datasets.x_y_g_split(te)
 
