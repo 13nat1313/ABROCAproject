@@ -102,6 +102,7 @@ def main(dataset_name: str = ADULT_DATASET,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_name", default=None, type=str,
+                        required=True,
                         choices=VALID_DATASETS)
     args = parser.parse_args()
     main(**vars(args))
