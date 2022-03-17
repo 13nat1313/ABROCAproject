@@ -7,49 +7,49 @@ DEFAULT_CONFIGS = {
     FAST_DRO_MODEL: {
         'model_type': FAST_DRO_MODEL,
         # training parameters
-        'steps': 13000,  # 1 epoch on largest (adult) train set w batch_size=128
-        'batch_size': 128,
+        'steps': 20000,  # 1 epoch on largest (adult) train set w batch_size=128
+        'batch_size': 256,
         # uncertainty set parameters
         'geometry': 'chi-square',
-        'size': 0.,
-        'reg': 0.0001,
+        'size': 0.01,
+        'reg': 0.,
         'max_iter': 1000,
         # optimization parameters
         'optimizer': torchutils.SGD_OPT,
         'criterion_name': torchutils.FASTDRO_CRITERION,
-        'momentum': 0.,
-        'weight_decay': 0.0001,
-        'learning_rate': 0.01,
+        'momentum': 0.5,
+        'weight_decay': 0.,
+        'learning_rate': 0.1,
     },
     DORO_MODEL: {
         'model_type': DORO_MODEL,
         # training parameters
-        'steps': 13000,  # 1 epoch on largest (adult) train set w batch_size=128
-        'batch_size': 128,
+        'steps': 20000,
+        'batch_size': 64,
         # DORO criterion parameters
         'geometry': 'chi-square',
         'alpha': 0.5,  # see appendix B.3 of DORO paper
-        'eps': 0.2,  # see appendix B.3 of DORO paper
+        'eps': 0.1,  # see appendix B.3 of DORO paper
         'criterion_name': torchutils.DORO_CRITERION,
         # optimization parameters
         'optimizer': torchutils.SGD_OPT,
-        'momentum': 0.,
+        'momentum': 0.5,
         'weight_decay': 0.0001,
         'learning_rate': 0.01,
     },
     GROUP_DRO_MODEL: {
         'model_type': GROUP_DRO_MODEL,
         # training parameters
-        'steps': 13000,  # 1 epoch on largest (adult) train set w batch_size=128
-        'batch_size': 128,
+        'steps': 20000,
+        'batch_size': 512,
         # criterion parameters
         'criterion_name': torchutils.GROUP_DRO_CRITERION,
-        'group_weights_step_size': 0.1,
+        'group_weights_step_size': 0.2,
         # optimization parameters
         'optimizer': torchutils.SGD_OPT,
-        'momentum': 0.,
+        'momentum': 0.99,
         'weight_decay': 0.0001,
-        'learning_rate': 0.01,
+        'learning_rate': 0.001,
     },
     IMPORANCE_WEIGHTING_MODEL: {
         'model_type': IMPORANCE_WEIGHTING_MODEL,
