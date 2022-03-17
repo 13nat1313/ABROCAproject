@@ -54,14 +54,14 @@ DEFAULT_CONFIGS = {
     IMPORANCE_WEIGHTING_MODEL: {
         'model_type': IMPORANCE_WEIGHTING_MODEL,
         # training parameters
-        'steps': 13000,  # 1 epoch on largest (adult) train set w batch_size=128
+        'steps': 20000,
         'batch_size': 128,
         # optimization parameters
         'optimizer': torchutils.SGD_OPT,
         'criterion_name': torchutils.IMPORTANCE_WEIGHTING_CRITERION,
-        'momentum': 0.,
+        'momentum': 0.5,
         'weight_decay': 0.0001,
-        'learning_rate': 0.01,
+        'learning_rate': 0.001,
     },
     LR_MODEL: {
         'model_type': LR_MODEL,
