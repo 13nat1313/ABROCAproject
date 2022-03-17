@@ -7,7 +7,7 @@ DEFAULT_CONFIGS = {
     FAST_DRO_MODEL: {
         'model_type': FAST_DRO_MODEL,
         # training parameters
-        'steps': 20000,  # 1 epoch on largest (adult) train set w batch_size=128
+        'steps': 10000,
         'batch_size': 256,
         # uncertainty set parameters
         'geometry': 'chi-square',
@@ -24,7 +24,7 @@ DEFAULT_CONFIGS = {
     DORO_MODEL: {
         'model_type': DORO_MODEL,
         # training parameters
-        'steps': 20000,
+        'steps': 10000,
         'batch_size': 64,
         # DORO criterion parameters
         'geometry': 'chi-square',
@@ -40,7 +40,7 @@ DEFAULT_CONFIGS = {
     GROUP_DRO_MODEL: {
         'model_type': GROUP_DRO_MODEL,
         # training parameters
-        'steps': 20000,
+        'steps': 10000,
         'batch_size': 512,
         # criterion parameters
         'criterion_name': torchutils.GROUP_DRO_CRITERION,
@@ -54,7 +54,7 @@ DEFAULT_CONFIGS = {
     IMPORANCE_WEIGHTING_MODEL: {
         'model_type': IMPORANCE_WEIGHTING_MODEL,
         # training parameters
-        'steps': 20000,
+        'steps': 10000,
         'batch_size': 128,
         # optimization parameters
         'optimizer': torchutils.SGD_OPT,
