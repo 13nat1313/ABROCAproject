@@ -42,6 +42,13 @@ def regress(X, y, n, p_0):
     perm = np.random.permutation(len(y_train))
     regressor.fit(X_train[perm], y_train[perm])
 
+    return regressor, X_test_0, X_test_1, y_test_0, y_test_1
+
+
+def evaluate(regressor, X_test_0, X_test_1, y_test_0, y_test_1):
+    if len(set(y_test_0)) == 1 or len(set(y_test_1)) == 1:
+        return
+
     y_pred_0 = regressor.predict(X_test_0)
     y_pred_1 = regressor.predict(X_test_1)
 
@@ -53,6 +60,68 @@ def regress(X, y, n, p_0):
     abroca = compute_abroca(fpr_0, tpr_0, fpr_1, tpr_1)
 
     return fpr_0, tpr_0, fpr_1, tpr_1, g0auc, g1auc, abroca
+
+
+def ABROCAvs_plot_new(plot_type, versus, r=10, s=0, **kwargs):
+    """Generates mean ABROCA values and standard errors that are necessary for creating 'ABROCA vs Change in Simulation Parameter' plots.
+
+    Args:
+        plot_type (str): Chooses which simulation parameter to manipulate. Options are 'n', 'p_0', 'mu_orthogonal', 'mu_parallel', 'obs_noise', 'theta_diff'.
+        versus (np.ndarray[float]): Varied values of some simulation parameter which is used in calculation of ABROCA.
+        r (int): Number of trials of ABROCA calculation, each with a new randomly simulated dataset based on same simulation parameters.
+        s (int): Random seed.
+        **kwargs: Passed to SimulationParams.
+
+    Returns:
+        A tuple (avg_abrocas, errors), where 'avg_abrocas' is an array of values for each set of simulation parameters, with each value being the mean ABROCA score over 'r' trials, and 'errors' is a similar array, but with standard errors instead of means.
+    """
+
+    np.random.seed(s)
+    avg_abrocas = None
+
+    for i in range(r):
+        abrocas = [np.nan for _ in range(len(versus))]
+        dflts = SimulationParams()
+        X_train, y_train = simulate(dflts)
+        reg = regress(X_train, y_train, dflts.n, dflts.p_0)
+        if reg is None:
+            continue
+
+        for j, e in enumerate(versus):
+            if plot_type == 'p_0':
+                kwargs['p_0'] = e
+            elif plot_type == 'mu_orthogonal':
+                kwargs['mu_change'], kwargs['orthog_to_boundary'] = e, True
+            elif plot_type == 'mu_parallel':
+                kwargs['mu_change'] = e
+            elif plot_type == 'obs_noise':
+                kwargs['eta_sd'] = [.1, e]
+            elif plot_type == 'theta_diff':
+                kwargs['theta_1'] = [1, 1 * e]
+            elif plot_type == 'n':
+                kwargs['n'] = e
+
+            dflts_shifted = SimulationParams(**kwargs)
+            X, y = simulate(dflts_shifted)
+            n_0 = int(round(dflts_shifted.n * dflts_shifted.p_0))
+            _, X_test_0, _, y_test_0 = train_test_split(X[:n_0], y[:n_0], test_size=0.2, random_state=0)
+            _, X_test_1, _, y_test_1 = train_test_split(X[n_0:], y[n_0:], test_size=0.2, random_state=0)
+
+            stats = evaluate(reg[0], X_test_0, X_test_1, y_test_0, y_test_1)
+            if stats is None:
+                continue
+
+            abrocas[j] = stats[6]
+
+        if avg_abrocas is None:
+            avg_abrocas = np.array(abrocas).reshape((-1, 1))
+        else:
+            avg_abrocas = np.append(avg_abrocas, np.array(abrocas).reshape((-1, 1)), axis=1)
+
+    errors = sem(avg_abrocas, axis=1, nan_policy='omit').reshape(-1)
+    avg_abrocas = np.nanmean(avg_abrocas, axis=1).ravel()
+
+    return avg_abrocas, errors
 
 
 def ABROCAvs_plot(plot_type, versus, r=10, s=0, **kwargs):
@@ -94,10 +163,8 @@ def ABROCAvs_plot(plot_type, versus, r=10, s=0, **kwargs):
             reg = regress(X, y, dflts.n, dflts.p_0)
             if reg is None:
                 continue
-            else:
-                _, _, _, _, _, _, abroca = reg
 
-            abrocas[j] = abroca
+            abrocas[j] = evaluate(reg[0], reg[1], reg[2], reg[3], reg[4])[6]
 
         if avg_abrocas is None:
             avg_abrocas = np.array(abrocas).reshape((-1, 1))
@@ -220,23 +287,6 @@ def visualize_data(point_size=.5, s=0, figsize=(20, 20), **kwargs):
     X_train_0, X_test_0, y_train_0, y_test_0 = train_test_split(X[:n_0], y[:n_0], test_size=0.2, random_state=0)
     X_train_1, X_test_1, y_train_1, y_test_1 = train_test_split(X[n_0:], y[n_0:], test_size=0.2, random_state=0)
 
-    X_train = np.append(X_train_0, X_train_1, axis=0)
-    y_train = np.append(y_train_0, y_train_1, axis=0)
-
-    perm = np.random.permutation(len(y_train))
-
-    regressor = LogisticRegressionCV(cv=5)
-    regressor.fit(X_train[perm], y_train[perm])
-
-    y_pred_0 = regressor.predict(X_test_0)
-    y_pred_1 = regressor.predict(X_test_1)
-
-    fpr_0, tpr_0, _ = roc_curve(y_test_0, y_pred_0)
-    fpr_1, tpr_1, _ = roc_curve(y_test_1, y_pred_1)
-    g0auc = auc(fpr_0, tpr_0)
-    g1auc = auc(fpr_1, tpr_1)
-    abroca = compute_abroca(fpr_0, tpr_0, fpr_1, tpr_1)
-
     plot_x0_0 = [a for a, b in zip(X_train_0[:, 0], y_train_0) if b == 0]
     plot_y0_0 = [a for a, b in zip(X_train_0[:, 1], y_train_0) if b == 0]
     plot_x0_1 = [a for a, b in zip(X_train_0[:, 0], y_train_0) if b == 1]
@@ -257,6 +307,29 @@ def visualize_data(point_size=.5, s=0, figsize=(20, 20), **kwargs):
             plot_y1_1, plot_z1_1)
         return visualize_data_3d(plot_vars)
     else:
+        dflts1 = SimulationParams()
+        X1, y1 = simulate(dflts1)
+        n_0 = int(round(dflts1.n * dflts1.p_0))
+        X_train_0, _, y_train_0, _ = train_test_split(X1[:n_0], y1[:n_0], test_size=0.2, random_state=0)
+        X_train_1, _, y_train_1, _ = train_test_split(X1[n_0:], y1[n_0:], test_size=0.2, random_state=0)
+
+        X_train = np.append(X_train_0, X_train_1, axis=0)
+        y_train = np.append(y_train_0, y_train_1, axis=0)
+
+        perm = np.random.permutation(len(y_train))
+
+        regressor = LogisticRegressionCV(cv=5)
+        regressor.fit(X_train[perm], y_train[perm])
+
+        y_pred_0 = regressor.predict(X_test_0)
+        y_pred_1 = regressor.predict(X_test_1)
+
+        fpr_0, tpr_0, _ = roc_curve(y_test_0, y_pred_0)
+        fpr_1, tpr_1, _ = roc_curve(y_test_1, y_pred_1)
+        g0auc = auc(fpr_0, tpr_0)
+        g1auc = auc(fpr_1, tpr_1)
+        abroca = compute_abroca(fpr_0, tpr_0, fpr_1, tpr_1)
+
         fig, axs = plt.subplots(2, 2, figsize=figsize)
         axs[1, 0].plot(fpr_0, tpr_0)
         axs[1, 0].set_title(f'Group 0 ROC\n auc = {g0auc}')
