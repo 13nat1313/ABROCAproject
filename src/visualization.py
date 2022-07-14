@@ -2,6 +2,7 @@ import numpy as np
 import plotly.express as px
 from matplotlib import pyplot as plt
 from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import train_test_split
 
@@ -37,6 +38,7 @@ def regress(X, y, n, p_0):
         return
 
     # regressor = RandomForestRegressor(n_estimators = 10, random_state=0)
+    # regressor = MLPClassifier(hidden_layer_sizes=(32,32), learning_rate_init=1e-4, batch_size=128, max_iter=10, random_state=0)
     regressor = LogisticRegression(solver='lbfgs')
     # regressor = LogisticRegressionCV(cv=5)
     perm = np.random.permutation(len(y_train))
@@ -62,7 +64,7 @@ def evaluate(regressor, X_test_0, X_test_1, y_test_0, y_test_1):
     return fpr_0, tpr_0, fpr_1, tpr_1, g0auc, g1auc, abroca
 
 
-def ABROCAvs_plot_new(plot_type, versus, r=10, s=0, **kwargs):
+def ABROCAvs_plot_new(plot_type, versus, r=10, s=0, both=False, **kwargs):
     """Generates mean ABROCA values and standard errors that are necessary for creating 'ABROCA vs Change in Simulation Parameter' plots.
 
     Args:
@@ -97,7 +99,10 @@ def ABROCAvs_plot_new(plot_type, versus, r=10, s=0, **kwargs):
             elif plot_type == 'obs_noise':
                 kwargs['eta_sd'] = [.1, e]
             elif plot_type == 'theta_diff':
-                kwargs['theta_1'] = [1, 1 * e]
+                if both:
+                    kwargs['theta_1'] = [1 * e, 1 * e]
+                else:
+                    kwargs['theta_1'] = [1, 1 * e]
             elif plot_type == 'n':
                 kwargs['n'] = e
 
@@ -124,7 +129,7 @@ def ABROCAvs_plot_new(plot_type, versus, r=10, s=0, **kwargs):
     return avg_abrocas, errors
 
 
-def ABROCAvs_plot(plot_type, versus, r=10, s=0, **kwargs):
+def ABROCAvs_plot(plot_type, versus, r=10, s=0, both=False, **kwargs):
     """Generates mean ABROCA values and standard errors that are necessary for creating 'ABROCA vs Change in Simulation Parameter' plots.
 
     Args:
@@ -153,7 +158,10 @@ def ABROCAvs_plot(plot_type, versus, r=10, s=0, **kwargs):
             elif plot_type == 'obs_noise':
                 kwargs['eta_sd'] = [.1, e]
             elif plot_type == 'theta_diff':
-                kwargs['theta_1'] = [1, 1 * e]
+                if both:
+                    kwargs['theta_1'] = [1 * e, 1 * e]
+                else:
+                    kwargs['theta_1'] = [1, 1 * e]
             elif plot_type == 'n':
                 kwargs['n'] = e
 
@@ -310,8 +318,8 @@ def visualize_data(point_size=.5, s=0, figsize=(20, 20), **kwargs):
         dflts1 = SimulationParams()
         X1, y1 = simulate(dflts1)
         n_0 = int(round(dflts1.n * dflts1.p_0))
-        X_train_0, _, y_train_0, _ = train_test_split(X1[:n_0], y1[:n_0], test_size=0.2, random_state=0)
-        X_train_1, _, y_train_1, _ = train_test_split(X1[n_0:], y1[n_0:], test_size=0.2, random_state=0)
+        X_train_0, _, y_train_0, _ = train_test_split(X[:n_0], y[:n_0], test_size=0.2, random_state=0)
+        X_train_1, _, y_train_1, _ = train_test_split(X[n_0:], y[n_0:], test_size=0.2, random_state=0)
 
         X_train = np.append(X_train_0, X_train_1, axis=0)
         y_train = np.append(y_train_0, y_train_1, axis=0)
